@@ -1,23 +1,50 @@
-<h2>Area Studente</h2>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Area Studente – Math Sorting Game</title>
+  <link rel="stylesheet" href="style.css">
 
-<!-- Login -->
-<input id="email" placeholder="Email studente">
-<input id="password" type="password" placeholder="Password">
-<button onclick="loginStudent()">Login</button>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+</head>
 
-<div id="studentPanel" style="display:none;">
+<body>
 
-  <!-- Entrata in sessione -->
-  <input id="sessionId" placeholder="ID sessione">
-  <input id="displayName" placeholder="Nome">
-  <button onclick="joinSession()">Entra</button>
+  <h1>Area Studente – Math Sorting Game</h1>
 
-  <h3 id="status">In attesa…</h3>
+  <!-- LOGIN STUDENTE -->
+  <section id="loginSection">
+    <h2>Login studente</h2>
 
-  <!-- Gioco -->
-  <canvas id="gameCanvas" width="400" height="600" style="display:none;"></canvas>
+    <input id="email" type="email" placeholder="Email studente">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="loginStudent()">Accedi</button>
 
-</div>
+    <p id="loginError" style="color:red;"></p>
+  </section>
 
-<script src="firebase-config.js"></script>
-<script src="student.js"></script>
+  <!-- PANNELLO STUDENTE -->
+  <section id="studentPanel" style="display:none;">
+
+    <h2>Entra nella sessione</h2>
+
+    <input id="sessionId" placeholder="ID sessione (es. 1A_2024)">
+    <input id="displayName" placeholder="Nome da mostrare">
+    <button onclick="joinSession()">Entra</button>
+
+    <h3 id="status">In attesa…</h3>
+
+    <!-- CANVAS DEL GIOCO -->
+    <canvas id="gameCanvas" width="400" height="600" style="display:none; border:1px solid #000;"></canvas>
+
+  </section>
+
+  <!-- SCRIPT -->
+  <script src="firebase-config.js"></script>
+  <script src="student.js"></script>
+
+</body>
+</html>

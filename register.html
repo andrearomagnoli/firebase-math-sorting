@@ -1,0 +1,10 @@
+auth.createUserWithEmailAndPassword(email, pass)
+  .then(cred => {
+    return db.ref("pendingTeachers/" + cred.user.uid).set({
+      email: email,
+      timestamp: Date.now()
+    });
+  })
+  .then(() => {
+    alert("Richiesta inviata. L'amministratore deve approvarla.");
+  });

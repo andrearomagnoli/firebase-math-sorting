@@ -43,13 +43,15 @@ function joinSession() {
   const statusEl = document.getElementById("status");
 
   if (!sessionId || !displayName) {
-    statusEl.textContent = "Inserisci ID sessione e nome.";
+    statusEl.textContent = "Inserisci cognome e codice partita.";
     return;
   }
 
   currentSessionId = sessionId;
-  currentUserId = auth.currentUser.uid;
   currentDisplayName = displayName;
+
+  // Genera ID casuale per lo studente
+  currentUserId = "guest_" + Math.random().toString(36).substring(2, 10);
 
   // Registra lo studente nella sessione
   db.ref(`sessions/${currentSessionId}/players/${currentUserId}`).set({

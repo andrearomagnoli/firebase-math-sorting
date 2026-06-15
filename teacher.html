@@ -1,0 +1,33 @@
+<h2>Area Docente</h2>
+
+<!-- Login -->
+<input id="email" placeholder="Email docente">
+<input id="password" type="password" placeholder="Password">
+<button onclick="loginTeacher()">Login</button>
+
+<!-- Dopo login -->
+<div id="teacherPanel" style="display:none;">
+  
+  <!-- Creazione sessione -->
+  <input id="sessionId" placeholder="ID sessione (es. 1A_2024)">
+  <button onclick="createSession()">Crea sessione</button>
+
+  <!-- Upload Excel -->
+  <input type="file" id="excelFile" accept=".xlsx">
+  <button onclick="uploadExcel()">Carica quesiti</button>
+
+  <!-- Lobby -->
+  <h3>Lobby</h3>
+  <div id="playersList"></div>
+
+  <!-- Start -->
+  <button onclick="startSession()">Avvia partita</button>
+
+  <!-- Classifica -->
+  <h3>Punteggi</h3>
+  <div id="scores"></div>
+
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="teacher.js"></script>

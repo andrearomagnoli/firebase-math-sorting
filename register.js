@@ -1,3 +1,9 @@
+// Intercetta il submit del form (Invio o click)
+document.getElementById("registerForm").addEventListener("submit", function (e) {
+  e.preventDefault();  // evita il refresh della pagina
+  registerTeacher();
+});
+
 function registerTeacher() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();

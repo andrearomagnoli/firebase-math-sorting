@@ -1,33 +1,93 @@
-<h2>Area Docente</h2>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Area Docente – Math Sorting Game</title>
+  <link rel="stylesheet" href="style.css">
 
-<!-- Login -->
-<input id="email" placeholder="Email docente">
-<input id="password" type="password" placeholder="Password">
-<button onclick="loginTeacher()">Login</button>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-<!-- Dopo login -->
-<div id="teacherPanel" style="display:none;">
-  
-  <!-- Creazione sessione -->
-  <input id="sessionId" placeholder="ID sessione (es. 1A_2024)">
-  <button onclick="createSession()">Crea sessione</button>
+  <!-- SheetJS per leggere Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+</head>
 
-  <!-- Upload Excel -->
-  <input type="file" id="excelFile" accept=".xlsx">
-  <button onclick="uploadExcel()">Carica quesiti</button>
+<body>
 
-  <!-- Lobby -->
-  <h3>Lobby</h3>
-  <div id="playersList"></div>
+  <h1>Area Docente – Math Sorting Game</h1>
 
-  <!-- Start -->
-  <button onclick="startSession()">Avvia partita</button>
+  <!-- LOGIN DOCENTE -->
+  <section id="loginSection">
+    <h2>Login docente</h2>
 
-  <!-- Classifica -->
-  <h3>Punteggi</h3>
-  <div id="scores"></div>
+    <input id="email" type="email" placeholder="Email docente">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="loginTeacher()">Accedi</button>
 
-</div>
+    <p id="loginError" style="color:red;"></p>
+  </section>
 
-<script src="firebase-config.js"></script>
-<script src="teacher.js"></script>
+  <!-- PANNELLO DOCENTE -->
+  <section id="teacherPanel" style="display:none;">
+
+    <h2>Gestione sessione</h2>
+
+    <!-- CREAZIONE SESSIONE -->
+    <div>
+      <h3>Crea nuova sessione</h3>
+      <input id="sessionId" placeholder="ID sessione (es. 1A_2024)">
+      <button onclick="createSession()">Crea sessione</button>
+      <p id="sessionStatus"></p>
+    </div>
+
+    <hr>
+
+    <!-- UPLOAD EXCEL -->
+    <div>
+      <h3>Carica quesiti da Excel</h3>
+      <p>Struttura Excel richiesta: ID_Quesito | Testo | Cesta | RispostaCorretta</p>
+
+      <input type="file" id="excelFile" accept=".xlsx">
+      <button onclick="uploadExcel()">Carica quesiti</button>
+
+      <p id="excelStatus"></p>
+    </div>
+
+    <hr>
+
+    <!-- LOBBY -->
+    <div>
+      <h3>Lobby studenti</h3>
+      <div id="playersList" style="padding:10px; border:1px solid #ccc; min-height:50px;">
+        Nessuno studente collegato
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- AVVIO PARTITA -->
+    <div>
+      <h3>Avvio partita</h3>
+      <button onclick="startSession()">Avvia partita</button>
+    </div>
+
+    <hr>
+
+    <!-- CLASSIFICA -->
+    <div>
+      <h3>Punteggi in tempo reale</h3>
+      <div id="scores" style="padding:10px; border:1px solid #ccc; min-height:50px;">
+        Nessun punteggio ancora
+      </div>
+    </div>
+
+  </section>
+
+  <!-- SCRIPT -->
+  <script src="firebase-config.js"></script>
+  <script src="teacher.js"></script>
+
+</body>
+</html>

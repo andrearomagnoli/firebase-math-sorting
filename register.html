@@ -10,13 +10,22 @@
 <section>
   <h2>Richiesta registrazione docente</h2>
 
-  <input id="email" type="email" placeholder="Email istituzionale">
-  <input id="password" type="password" placeholder="Password">
-  <button onclick="registerTeacher()">Invia richiesta</button>
+  <form id="registerForm">
+    <input id="email" type="email" placeholder="Email istituzionale" required>
+    <input id="password" type="password" placeholder="Password" required>
+    <button type="submit">Invia richiesta</button>
+  </form>
 
   <p id="registerStatus"></p>
 </section>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js">
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="register.js"></script>
+
+</body>
+</html>

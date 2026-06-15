@@ -1,0 +1,23 @@
+<h2>Area Studente</h2>
+
+<!-- Login -->
+<input id="email" placeholder="Email studente">
+<input id="password" type="password" placeholder="Password">
+<button onclick="loginStudent()">Login</button>
+
+<div id="studentPanel" style="display:none;">
+
+  <!-- Entrata in sessione -->
+  <input id="sessionId" placeholder="ID sessione">
+  <input id="displayName" placeholder="Nome">
+  <button onclick="joinSession()">Entra</button>
+
+  <h3 id="status">In attesa…</h3>
+
+  <!-- Gioco -->
+  <canvas id="gameCanvas" width="400" height="600" style="display:none;"></canvas>
+
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="student.js"></script>

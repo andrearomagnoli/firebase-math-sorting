@@ -27,20 +27,20 @@
   </section>
 
   <!-- PANNELLO STUDENTE -->
-  <section id="studentPanel" style="display:none;">
-
+  <section id="studentPanel">
+  
     <h2>Entra nella sessione</h2>
-
-    <input id="sessionId" placeholder="ID sessione (es. 1A_2024)">
-    <input id="displayName" placeholder="Nome da mostrare">
+  
+    <input id="sessionId" placeholder="Codice partita (es. 1A_2024)">
+    <input id="displayName" placeholder="Cognome">
     <button onclick="joinSession()">Entra</button>
-
+  
     <h3 id="status">In attesa…</h3>
-
-    <!-- CANVAS DEL GIOCO -->
-    <canvas id="gameCanvas" width="400" height="600" style="display:none; border:1px solid #000;"></canvas>
-
+  
+    <div id="gameContainer" style="width:400px; height:600px; border:1px solid #000; display:none;"></div>
+  
   </section>
+
 
   <!-- SCRIPT -->
   <script src="firebase-config.js"></script>

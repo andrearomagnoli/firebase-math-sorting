@@ -1,10 +1,22 @@
-auth.createUserWithEmailAndPassword(email, pass)
-  .then(cred => {
-    return db.ref("pendingTeachers/" + cred.user.uid).set({
-      email: email,
-      timestamp: Date.now()
-    });
-  })
-  .then(() => {
-    alert("Richiesta inviata. L'amministratore deve approvarla.");
-  });
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Registrazione Docente</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<section>
+  <h2>Richiesta registrazione docente</h2>
+
+  <input id="email" type="email" placeholder="Email istituzionale">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="registerTeacher()">Invia richiesta</button>
+
+  <p id="registerStatus"></p>
+</section>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js">

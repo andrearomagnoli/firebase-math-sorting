@@ -21,14 +21,22 @@ function loginTeacher() {
   }
 
   auth.signInWithEmailAndPassword(email, pass)
-    .then(() => {
-      document.getElementById("loginSection").style.display = "none";
-      document.getElementById("teacherPanel").style.display = "block";
-    })
-    .catch(err => {
-      console.error(err);
-      errorEl.textContent = "Login non riuscito: " + err.message;
-    });
+  .then(() => {
+    const uid = auth.currentUser.uid;
+
+    return db.ref("teachers/" + uid).once("value");
+  })
+  .then(snap => {
+    if (!snap.exists()) {
+      throw new Error("Account non autorizzato. Contatta l'amministratore.");
+    }
+
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("teacherPanel").style.display = "block";
+  })
+  .catch(err => {
+    document.getElementById("loginError").textContent = err.message;
+  });
 }
 
 // =========================

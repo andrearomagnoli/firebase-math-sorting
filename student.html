@@ -7,40 +7,33 @@
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <!-- Phaser -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
 </head>
 
 <body>
 
   <h1>Area Studente – Math Sorting Game</h1>
 
-  <!-- LOGIN STUDENTE -->
-  <section id="loginSection">
-    <h2>Login studente</h2>
-
-    <input id="email" type="email" placeholder="Email studente">
-    <input id="password" type="password" placeholder="Password">
-    <button onclick="loginStudent()">Accedi</button>
-
-    <p id="loginError" style="color:red;"></p>
-  </section>
-
-  <!-- PANNELLO STUDENTE -->
+  <!-- PANNELLO STUDENTE (senza login) -->
   <section id="studentPanel">
-  
+
     <h2>Entra nella sessione</h2>
-  
+
     <input id="sessionId" placeholder="Codice partita (es. 1A_2024)">
     <input id="displayName" placeholder="Cognome">
     <button onclick="joinSession()">Entra</button>
-  
-    <h3 id="status">In attesa…</h3>
-  
-    <div id="gameContainer" style="width:400px; height:600px; border:1px solid #000; display:none;"></div>
-  
-  </section>
 
+    <h3 id="status">In attesa…</h3>
+
+    <!-- Contenitore Phaser -->
+    <div id="gameContainer"
+         style="width:400px; height:600px; border:1px solid #000; display:none;">
+    </div>
+
+  </section>
 
   <!-- SCRIPT -->
   <script src="firebase-config.js"></script>

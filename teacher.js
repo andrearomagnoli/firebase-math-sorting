@@ -113,8 +113,11 @@ function loadSessionStatus() {
 
     const data = snap.val();
     statusBox.textContent = "Sessione attiva";
-    activeBox.style.display = "block";
-    startBox.style.display = "block";
+    if (data.status === "waiting") {
+      startBox.style.display = "block";   // mostra "Avvia partita"
+    } else {
+      startBox.style.display = "none";    // nasconde dopo l’avvio
+    }
 
     document.getElementById("activeSessionLabel").textContent =
       "Sessione: " + sessionId;
@@ -157,7 +160,7 @@ function updateScores(sessionId) {
       const player = child.val();
 
       const li = document.createElement("li");
-      li.textContent = `${player.name || "(senza nome)"} – ${player.score}`;
+      li.textContent = `${player.name || "(senza nome)"} – ${player.score || 0}`;
 
       ol.appendChild(li);
     });

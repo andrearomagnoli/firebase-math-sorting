@@ -56,6 +56,14 @@ function joinSession() {
       return;
     }
 
+    const data = snap.val();
+
+    if (data.status === "finished") {
+      alert("La sessione è terminata. Non puoi più entrare.");
+      hasJoined = false;
+      return;
+    }
+
     enterSession(sessionId, name);
   });
 }
@@ -88,6 +96,11 @@ function enterSession(sessionId, name) {
   db.ref(`sessions/${sessionId}`).on("value", snap => {
     if (!snap.exists()) {
       alert("La sessione è stata chiusa dal docente.");
+      leaveSession();
+    }
+
+    if (snap.val().status === "finished") {
+      alert("La partita è terminata.");
       leaveSession();
     }
   });
@@ -170,12 +183,20 @@ function startGame() {
 // ---------------------------------------------------------
 function endGame() {
   if (currentSessionId && studentId) {
-    db.ref(`sessions/${currentSessionId}/players/${studentId}/score`).set(score);
+
+    // 1) Salva il punteggio
+    db.ref(`sessions/${currentSessionId}/players/${studentId}/score`)
+      .set(score)
+      .then(() => {
+
+        // 2) Solo dopo segna la sessione come terminata
+        return db.ref(`sessions/${currentSessionId}/status`).set("finished");
+      })
+      .then(() => {
+        alert("Partita terminata! Punteggio: " + score);
+        leaveSession();
+      });
   }
-
-  alert("Partita terminata! Punteggio: " + score);
-
-  leaveSession();
 }
 
 

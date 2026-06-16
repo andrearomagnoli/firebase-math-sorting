@@ -20,23 +20,29 @@ auth.onAuthStateChanged(user => {
   const uid = user.uid;
 
   // Controlla se è un docente approvato
-  db.ref("teachers/" + uid).once("value").then(snap => {
-    if (!snap.exists()) {
-      // Non è un docente approvato → logout
-      auth.signOut();
-      return;
+  db.ref("teachers/" + uid + "/currentSession").once("value").then(snap => {
+    const savedSession = snap.val();
+
+    if (savedSession) {
+      currentSessionId = savedSession;
+      loadLobby();
     }
-
-    // Utente valido → mostra dashboard
-    document.getElementById("loginForm").style.display = "none";
-    document.getElementById("teacherPanel").style.display = "block";
-
-    // Mostra pannello admin
-    showAdminPanel();
-
-    // Ricarica lobby se esiste
-    loadLobby();
   });
+// Utente valido → mostra dashboard
+document.getElementById("loginForm").style.display = "none";
+document.getElementById("teacherPanel").style.display = "block";
+
+// Mostra pannello admin
+showAdminPanel();
+
+// 🔥 RICARICA SESSIONE SALVATA
+db.ref("teachers/" + uid + "/currentSession").once("value").then(snap => {
+  const savedSession = snap.val();
+
+  if (savedSession) {
+    currentSessionId = savedSession;
+    loadLobby();
+  }
 });
 
 // =========================
@@ -77,11 +83,17 @@ function createSession() {
 
   currentSessionId = sessionId;
 
+  const uid = auth.currentUser.uid;
+
   const ref = db.ref("sessions/" + currentSessionId);
 
   ref.set({
     status: "waiting",
-    teacherId: auth.currentUser.uid
+    teacherId: uid
+  })
+  .then(() => {
+    // 🔥 SALVA LA SESSIONE CORRENTE PER IL DOCENTE
+    return db.ref("teachers/" + uid + "/currentSession").set(currentSessionId);
   })
   .then(() => {
     sessionStatusEl.textContent = "Sessione creata: " + currentSessionId;

@@ -4,6 +4,7 @@ const db = firebase.database();
 let currentSessionId = null;
 let studentId = null;
 let hasJoined = false;
+let gameInstance = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   const joinBtn = document.getElementById("joinBtn");
@@ -117,13 +118,23 @@ function resetStudentUI() {
 }
 
 function startGame() {
-  document.getElementById("gameContainer").style.display = "block";
+  const container = document.getElementById("gameContainer");
+
+  // Mostra il contenitore PRIMA di creare il gioco
+  container.style.display = "block";
+
+  // Se esiste già un'istanza, la distruggo
+  if (gameInstance) {
+    gameInstance.destroy(true);
+    gameInstance = null;
+  }
 
   const config = {
     type: Phaser.AUTO,
     width: 400,
     height: 600,
     parent: "gameContainer",
+    backgroundColor: "#ffffff",
     scene: {
       preload: preload,
       create: create,
@@ -131,10 +142,19 @@ function startGame() {
     }
   };
 
-  new Phaser.Game(config);
+  gameInstance = new Phaser.Game(config);
 }
 
 // Placeholder per il tuo gioco reale
-function preload() {}
-function create() {}
+function preload() {
+  // Nessun asset, va bene così
+}
+
+function create() {
+  this.add.text(50, 50, "Gioco avviato!", {
+    font: "24px Arial",
+    fill: "#000"
+  });
+}
+
 function update() {}

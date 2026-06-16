@@ -5,9 +5,9 @@
   <title>Area Studente – Math Sorting Game</title>
   <link rel="stylesheet" href="style.css">
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <!-- Firebase SOLO UNA VOLTA -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <!-- Phaser -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
@@ -17,9 +17,7 @@
 
   <h1>Area Studente – Math Sorting Game</h1>
 
-  <!-- PANNELLO STUDENTE (senza login) -->
   <section id="studentPanel">
-
     <h2>Entra nella sessione</h2>
 
     <input id="sessionId" placeholder="Codice partita (es. 1A_2024)">
@@ -28,16 +26,13 @@
 
     <h3 id="status">In attesa…</h3>
 
-    <!-- Contenitore Phaser -->
     <div id="gameContainer"
          style="width:400px; height:600px; border:1px solid #000; display:none;">
     </div>
-
   </section>
 
-  <!-- SCRIPT -->
+  <!-- Config + Script -->
   <script src="firebase-config.js"></script>
-  <script src="app.js"></script>
   <script src="student.js"></script>
 
 </body>

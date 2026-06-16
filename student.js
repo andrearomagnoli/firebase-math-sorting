@@ -125,6 +125,13 @@ function leaveSession() {
   resetStudentUI();
 }
 
+function leaveSessionManual() {
+  if (currentSessionId && studentId) {
+    db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove();
+  }
+  resetStudentUI();
+}
+
 
 // ---------------------------------------------------------
 // 4) RESET UI

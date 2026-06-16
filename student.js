@@ -51,7 +51,7 @@ function joinSession() {
   currentDisplayName = displayName;
 
   // Genera ID casuale per lo studente
-  currentUserId = "guest_" + Math.random().toString(36).substring(2, 10);
+  currentUserId = auth.currentUser.uid;
 
   // Registra lo studente nella sessione
   db.ref(`sessions/${currentSessionId}/players/${currentUserId}`).set({

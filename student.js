@@ -7,36 +7,7 @@ let currentUserId = null;
 let currentDisplayName = null;
 
 // =====================================
-// Login studente
-// =====================================
-
-function loginStudent() {
-  const email = document.getElementById("email").value.trim();
-  const pass = document.getElementById("password").value.trim();
-  const errorEl = document.getElementById("loginError");
-
-  errorEl.textContent = "";
-
-  if (!email || !pass) {
-    errorEl.textContent = "Inserisci email e password.";
-    return;
-  }
-
-  auth.signInWithEmailAndPassword(email, pass)
-    .then(() => {
-      document.getElementById("loginSection").style.display = "none";
-      document.getElementById("studentPanel").style.display = "block";
-
-      currentUserId = auth.currentUser.uid;
-    })
-    .catch(err => {
-      console.error(err);
-      errorEl.textContent = "Login non riuscito: " + err.message;
-    });
-}
-
-// =====================================
-// Entrata nella sessione
+// Entrata nella sessione (senza login)
 // =====================================
 
 function joinSession() {
@@ -52,8 +23,12 @@ function joinSession() {
   currentSessionId = sessionId;
   currentDisplayName = displayName;
 
-  // Genera ID casuale per lo studente
-  currentUserId = auth.currentUser.uid;
+  // Genera ID stabile per lo studente (persistente nel browser)
+  if (!localStorage.getItem("studentId")) {
+    localStorage.setItem("studentId", "guest_" + Math.random().toString(36).substring(2, 10));
+  }
+
+  currentUserId = localStorage.getItem("studentId");
 
   // Registra lo studente nella sessione
   db.ref(`sessions/${currentSessionId}/players/${currentUserId}`).set({
@@ -81,11 +56,9 @@ function startGame() {
   const canvas = document.getElementById("gameCanvas");
   canvas.style.display = "block";
 
-  // Carica i quesiti
   db.ref(`sessions/${currentSessionId}/questions`).once("value").then(snap => {
     const questions = snap.val() || {};
 
-    // Avvia il gioco vero e proprio
     runGame(questions, (finalScore) => {
       endGame(finalScore);
     });
@@ -95,17 +68,14 @@ function startGame() {
 // =====================================
 // Placeholder del gioco
 // =====================================
-// Questa funzione va sostituita con la logica reale (Phaser, Canvas, ecc.)
 
 function runGame(questions, callbackEnd) {
   const ctx = document.getElementById("gameCanvas").getContext("2d");
 
-  // Placeholder grafico
   ctx.fillStyle = "black";
   ctx.font = "20px Arial";
   ctx.fillText("Gioco in esecuzione...", 80, 300);
 
-  // Simulazione di un gioco di 10 secondi
   let score = 0;
   let time = 10;
 
@@ -117,7 +87,6 @@ function runGame(questions, callbackEnd) {
     ctx.fillText("Tempo: " + time, 150, 350);
     ctx.fillText("Punteggio: " + score, 150, 380);
 
-    // Simulazione: aumenta punteggio
     score += Math.floor(Math.random() * 3);
 
     if (time <= 0) {
@@ -132,7 +101,6 @@ function runGame(questions, callbackEnd) {
 // =====================================
 
 function endGame(score) {
-  // Salva punteggio
   db.ref(`sessions/${currentSessionId}/players/${currentUserId}/score`).set(score);
   db.ref(`sessions/${currentSessionId}/players/${currentUserId}/status`).set("finished");
 

@@ -1,14 +1,13 @@
 // =====================================
-// Variabili globali
+// Firebase
 // =====================================
-
 const auth = firebase.auth();
 const db = firebase.database();
 
 let currentSessionId = null;
 
 // =====================================
-// Login / Logout docente
+// Login / Logout
 // =====================================
 
 auth.onAuthStateChanged(user => {
@@ -20,7 +19,6 @@ auth.onAuthStateChanged(user => {
 
   const uid = user.uid;
 
-  // Verifica che sia un docente approvato
   db.ref("teachers/" + uid).once("value").then(snap => {
     if (!snap.exists()) {
       auth.signOut();
@@ -34,11 +32,9 @@ auth.onAuthStateChanged(user => {
     db.ref("teacherSessions/" + uid).once("value").then(snap => {
       if (snap.exists()) {
         currentSessionId = snap.val().sessionId;
-        localStorage.setItem("currentSessionId", currentSessionId);
         loadLobby();
       } else {
         currentSessionId = null;
-        localStorage.removeItem("currentSessionId");
       }
 
       updateSessionUI();
@@ -46,11 +42,9 @@ auth.onAuthStateChanged(user => {
   });
 });
 
-// Logout
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  localStorage.removeItem("currentSessionId");
+document.getElementById("logoutBtn").onclick = () => {
   auth.signOut();
-});
+};
 
 // =====================================
 // Login docente
@@ -59,28 +53,19 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
 function loginTeacher() {
   const email = document.getElementById("email").value.trim();
   const pass = document.getElementById("password").value.trim();
-  const errorEl = document.getElementById("loginError");
-
-  errorEl.textContent = "";
-
-  if (!email || !pass) {
-    errorEl.textContent = "Inserisci email e password.";
-    return;
-  }
 
   auth.signInWithEmailAndPassword(email, pass)
-    .catch(err => {
-      errorEl.textContent = err.message;
-    });
+    .catch(err => document.getElementById("loginError").textContent = err.message);
 }
 
 // =====================================
-// UI dinamica sessione
+// UI dinamica
 // =====================================
 
 function updateSessionUI() {
   const createBox = document.getElementById("createSessionBox");
   const activeBox = document.getElementById("activeSessionBox");
+  const startBox = document.getElementById("startSessionBox");
   const label = document.getElementById("activeSessionLabel");
   const status = document.getElementById("sessionStatus");
 
@@ -92,6 +77,7 @@ function updateSessionUI() {
   } else {
     createBox.style.display = "block";
     activeBox.style.display = "none";
+    startBox.style.display = "none";
     status.textContent = "Nessuna sessione attiva";
   }
 }
@@ -101,24 +87,14 @@ function updateSessionUI() {
 // =====================================
 
 function createSession() {
-  const sessionIdInput = document.getElementById("sessionId");
-  const sessionId = sessionIdInput.value.trim();
+  const sessionId = document.getElementById("sessionId").value.trim();
   const uid = auth.currentUser.uid;
 
-  if (!sessionId) {
-    document.getElementById("sessionStatus").textContent = "Inserisci un ID sessione.";
-    return;
-  }
+  if (!sessionId) return;
 
-  // Controlla se esiste già una sessione
   db.ref("teacherSessions/" + uid).once("value").then(snap => {
-    if (snap.exists()) {
-      document.getElementById("sessionStatus").textContent =
-        "Hai già una sessione attiva: " + snap.val().sessionId;
-      return;
-    }
+    if (snap.exists()) return;
 
-    // Crea sessione
     db.ref("sessions/" + sessionId).set({
       status: "waiting",
       teacherId: uid
@@ -126,7 +102,6 @@ function createSession() {
     .then(() => db.ref("teacherSessions/" + uid).set({ sessionId }))
     .then(() => {
       currentSessionId = sessionId;
-      localStorage.setItem("currentSessionId", sessionId);
       updateSessionUI();
       loadLobby();
     });
@@ -140,20 +115,51 @@ function createSession() {
 function deleteSession() {
   const uid = auth.currentUser.uid;
 
-  if (!currentSessionId) return;
-
   db.ref("sessions/" + currentSessionId).remove()
     .then(() => db.ref("teacherSessions/" + uid).remove())
     .then(() => {
-      localStorage.removeItem("currentSessionId");
       currentSessionId = null;
-
       document.getElementById("playersList").innerHTML = "";
       document.getElementById("scores").innerHTML = "";
-
       updateSessionUI();
     });
 }
+
+// =====================================
+// Lobby
+// =====================================
+
+function loadLobby() {
+  watchLobby();
+  watchScores();
+}
+
+function watchLobby() {
+  db.ref(`sessions/${currentSessionId}/players`).on("value", snap => {
+    const players = snap.val() || {};
+
+    updateStartButton(players);
+
+    const list = document.getElementById("playersList");
+
+    if (Object.keys(players).length === 0) {
+      list.innerHTML = "Nessuno studente collegato";
+      return;
+    }
+
+    let html = "<ul>";
+    for (const p of Object.values(players)) {
+      html += `<li>${p.displayName} – ${p.status}</li>`;
+    }
+    html += "</ul>";
+
+    list.innerHTML = html;
+  });
+}
+
+// =====================================
+// Pulsante avvio
+// =====================================
 
 function updateStartButton(players) {
   const startBox = document.getElementById("startSessionBox");
@@ -165,37 +171,8 @@ function updateStartButton(players) {
   }
 }
 
-// =====================================
-// Lobby
-// =====================================
-
-function loadLobby() {
-  if (!currentSessionId) return;
-  watchLobby();
-  watchScores();
-}
-
-function watchLobby() {
-  const playersListEl = document.getElementById("playersList");
-
-  db.ref(`sessions/${currentSessionId}/players`).on("value", snap => {
-    const players = snap.val() || {};
-
-    updateStartButton(players);
-
-    if (Object.keys(players).length === 0) {
-      playersListEl.innerHTML = "Nessuno studente collegato";
-      return;
-    }
-
-    let html = "<ul>";
-    for (const [uid, p] of Object.entries(players)) {
-      html += `<li>${p.displayName} – ${p.status}</li>`;
-    }
-    html += "</ul>";
-
-    playersListEl.innerHTML = html;
-  });
+function startSession() {
+  db.ref(`sessions/${currentSessionId}/status`).set("running");
 }
 
 // =====================================
@@ -203,23 +180,21 @@ function watchLobby() {
 // =====================================
 
 function watchScores() {
-  const scoresEl = document.getElementById("scores");
-
   db.ref(`sessions/${currentSessionId}/players`).on("value", snap => {
     const players = snap.val() || {};
+    const scoresEl = document.getElementById("scores");
 
     if (Object.keys(players).length === 0) {
       scoresEl.innerHTML = "Nessun punteggio ancora";
       return;
     }
 
-    const sorted = Object.entries(players)
-      .sort((a, b) => (b[1].score || 0) - (a[1].score || 0));
+    const sorted = Object.values(players).sort((a, b) => (b.score || 0) - (a.score || 0));
 
     let html = "<ol>";
-    sorted.forEach(([uid, p]) => {
+    for (const p of sorted) {
       html += `<li>${p.displayName}: ${p.score || 0} punti</li>`;
-    });
+    }
     html += "</ol>";
 
     scoresEl.innerHTML = html;

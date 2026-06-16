@@ -24,8 +24,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (exitBtn) {
-    exitBtn.addEventListener("touchstart", e => { e.preventDefault(); leaveSession(); }, { passive: false });
-    exitBtn.addEventListener("click", leaveSession);
+    exitBtn.addEventListener("touchstart", e => { e.preventDefault(); leaveSessionManual(); }, { passive: false });
+    exitBtn.addEventListener("click", leaveSessionManual);
   }
 });
 
@@ -188,12 +188,10 @@ function endGame() {
   if (currentSessionId && studentId) {
     db.ref(`sessions/${currentSessionId}/players/${studentId}/score`)
       .set(score)
-      .then(() => {
-        return db.ref(`sessions/${currentSessionId}/status`).set("finished");
-      })
+      .then(() => db.ref(`sessions/${currentSessionId}/status`).set("finished"))
       .then(() => {
         alert("Partita terminata! Punteggio: " + score);
-        resetStudentUI();
+        resetStudentUI(); // NON rimuovere il player
       });
   }
 }

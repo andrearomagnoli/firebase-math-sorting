@@ -119,10 +119,6 @@ function enterSession(sessionId, name) {
 // 3) USCITA
 // ---------------------------------------------------------
 function leaveSession() {
-  if (currentSessionId && studentId) {
-    db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove();
-  }
-
   resetStudentUI();
 }
 

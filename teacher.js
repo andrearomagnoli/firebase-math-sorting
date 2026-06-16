@@ -35,6 +35,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+let teacherListeners = [];
+function addTeacherListener(ref, event, callback) {
+  ref.on(event, callback);
+  teacherListeners.push({ ref, event, callback });
+}
+function removeTeacherListeners() {
+  teacherListeners.forEach(l => l.ref.off(l.event, l.callback));
+  teacherListeners = [];
+}
+
 // LOGIN DOCENTE
 function loginTeacher() {
   const email = document.getElementById("email").value.trim();
@@ -95,43 +105,68 @@ function loadSessionStatus() {
   const statusBox = document.getElementById("sessionStatus");
   const activeBox = document.getElementById("activeSessionBox");
   const startBox = document.getElementById("startSessionBox");
+  const deleteBtn = document.getElementById("deleteSessionBtn");
 
+  // Se non c’è sessionId, UI pulita
   if (!sessionId) {
     statusBox.textContent = "Nessuna sessione";
     activeBox.style.display = "none";
     startBox.style.display = "none";
+    deleteBtn.style.display = "none";
     return;
   }
 
-  db.ref(`sessions/${sessionId}`).on("value", snap => {
-    if (!snap.exists()) {
-      statusBox.textContent = "Nessuna sessione attiva";
-      activeBox.style.display = "none";
-      startBox.style.display = "none";
-      document.getElementById("deleteSessionBtn").style.display = "none";
-      return;
+  // Rimuove eventuali listener precedenti
+  if (window.teacherListeners) {
+    window.teacherListeners.forEach(l => l.ref.off(l.event, l.callback));
+  }
+  window.teacherListeners = [];
+
+  function addTeacherListener(ref, event, callback) {
+    ref.on(event, callback);
+    window.teacherListeners.push({ ref, event, callback });
+  }
+
+  // Listener principale sulla sessione
+  addTeacherListener(
+    db.ref(`sessions/${sessionId}`),
+    "value",
+    snap => {
+
+      // Caso: sessione eliminata
+      if (!snap.exists()) {
+        statusBox.textContent = "Nessuna sessione attiva";
+        activeBox.style.display = "none";
+        startBox.style.display = "none";
+        deleteBtn.style.display = "none";
+        return;
+      }
+
+      // Caso: sessione esiste
+      const data = snap.val();
+
+      statusBox.textContent = "Sessione attiva";
+      deleteBtn.style.display = "block"; // Mostra sempre elimina sessione
+
+      // Mostra o nasconde il pulsante "Avvia partita"
+      if (data.status === "waiting") {
+        startBox.style.display = "block";
+      } else {
+        startBox.style.display = "none";
+      }
+
+      // Mantieni visibile il box sessione attiva
+      activeBox.style.display = "block";
+
+      // Aggiorna etichetta sessione
+      document.getElementById("activeSessionLabel").textContent =
+        "Sessione: " + sessionId;
+
+      // Aggiorna lista studenti e punteggi
+      updatePlayersList(sessionId);
+      updateScores(sessionId);
     }
-
-    // Se la sessione ESISTE, mostra il pulsante elimina
-    document.getElementById("deleteSessionBtn").style.display = "block";
-
-    const data = snap.val();
-    statusBox.textContent = "Sessione attiva";
-    if (data.status === "waiting") {
-      startBox.style.display = "block";   // mostra "Avvia partita"
-    } else if (data.status === "finished"){
-      startBox.style.display = "none"; // nascondi avvia partita
-      activeBox.style.display = "block"; // mantieni visibile
-    } else {
-      startBox.style.display = "none";    // nasconde dopo l’avvio
-    }
-
-    document.getElementById("activeSessionLabel").textContent =
-      "Sessione: " + sessionId;
-
-    updatePlayersList(sessionId);
-    updateScores(sessionId);
-  });
+  );
 }
 
 // AGGIORNA LISTA STUDENTI

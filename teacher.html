@@ -18,8 +18,8 @@
 
   <h1>Area Docente – Math Sorting Game</h1>
 
+  <!-- LOGIN DOCENTE -->
   <div id="loginForm">
-    <!-- LOGIN DOCENTE -->
     <section id="loginSection">
       <h2>Login docente</h2>
 
@@ -31,7 +31,14 @@
     </section>
   </div>
 
+  <!-- PANNELLO DOCENTE (visibile solo se loggato e approvato) -->
   <div id="teacherPanel" style="display:none;">
+
+    <!-- Barra superiore con logout -->
+    <section id="topBar">
+      <button id="logoutBtn">Logout</button>
+    </section>
+
     <!-- PANNELO ADMIN -->
     <section id="adminPanel" style="display:none;">
       <h2>Gestione docenti in attesa</h2>
@@ -47,8 +54,8 @@
       </table>
     </section>
 
-    <!-- PANNELLO DOCENTE -->
-    <section id="teacherPanel" style="display:none;">
+    <!-- PANNELLO PRINCIPALE DOCENTE -->
+    <section id="teacherMain">
 
       <h2>Gestione sessione</h2>
 

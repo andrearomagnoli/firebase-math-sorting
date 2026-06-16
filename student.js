@@ -2,6 +2,8 @@
 // Variabili globali
 // =====================================
 
+const db = firebase.database();
+
 let currentSessionId = null;
 let currentUserId = null;
 let currentDisplayName = null;

@@ -14,6 +14,21 @@ let score = 0;
 let timerText = null;
 let scoreText = null;
 
+// Lista dei listener Firebase attivi
+let firebaseListeners = [];
+
+function addFirebaseListener(ref, event, callback) {
+  ref.on(event, callback);
+  firebaseListeners.push({ ref, event, callback });
+}
+
+function removeAllFirebaseListeners() {
+  firebaseListeners.forEach(l => {
+    l.ref.off(l.event, l.callback);
+  });
+  firebaseListeners = [];
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const joinBtn = document.getElementById("joinBtn");
   const exitBtn = document.getElementById("exitBtn");
@@ -49,7 +64,6 @@ function joinSession() {
     return;
   }
 
-  // Controllo se la sessione esiste
   db.ref(`sessions/${sessionId}`).once("value").then(snap => {
     if (!snap.exists()) {
       alert("La sessione non esiste. Controlla il codice.");
@@ -71,7 +85,7 @@ function joinSession() {
 
 
 // ---------------------------------------------------------
-// 2) ENTRA NELLA SESSIONE (vero ingresso)
+// 2) ENTRA NELLA SESSIONE
 // ---------------------------------------------------------
 function enterSession(sessionId, name) {
   currentSessionId = sessionId;
@@ -84,7 +98,6 @@ function enterSession(sessionId, name) {
 
   studentId = newPlayer.key;
 
-  // Nascondi form
   document.getElementById("sessionId").style.display = "none";
   document.getElementById("displayName").style.display = "none";
   document.getElementById("joinBtn").style.display = "none";
@@ -93,42 +106,42 @@ function enterSession(sessionId, name) {
   document.getElementById("status").textContent =
     "In attesa che il docente avvii la partita.";
 
-  // LISTENER 1 — Il docente elimina la sessione
-  // (questo è l’unico caso in cui lo studente deve essere espulso)
-  db.ref(`sessions/${sessionId}`).on("value", snap => {
-    if (!snap.exists()) {
-      // Se la partita è finita, NON notificare nulla
-      if (!gameEnded) {
-        alert("La sessione è stata chiusa dal docente.");
+  // Listener: docente elimina la sessione
+  addFirebaseListener(
+    db.ref(`sessions/${sessionId}`),
+    "value",
+    snap => {
+      if (!snap.exists()) {
+        if (!gameEnded) {
+          alert("La sessione è stata chiusa dal docente.");
+        }
+        removeAllFirebaseListeners();
+        resetStudentUI();
       }
-      resetStudentUI();
-      return;
     }
+  );
 
-    // Se la sessione è "finished", NON fare nulla.
-    // endGame() gestisce già la fine della partita.
-  });
-
-  // LISTENER 2 — Il docente avvia la partita
-  db.ref(`sessions/${sessionId}/status`).on("value", snap => {
-    if (snap.val() === "started") {
-      startGame();
+  // Listener: docente avvia la partita
+  addFirebaseListener(
+    db.ref(`sessions/${sessionId}/status`),
+    "value",
+    snap => {
+      if (snap.val() === "started") {
+        startGame();
+      }
     }
-  });
+  );
 }
 
 
 // ---------------------------------------------------------
-// 3) USCITA
+// 3) USCITA MANUALE (studente preme "Esci")
 // ---------------------------------------------------------
-function leaveSession() {
-  resetStudentUI();
-}
-
 function leaveSessionManual() {
   if (currentSessionId && studentId) {
     db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove();
   }
+  removeAllFirebaseListeners();
   resetStudentUI();
 }
 
@@ -148,6 +161,7 @@ function resetStudentUI() {
   currentSessionId = null;
   studentId = null;
   hasJoined = false;
+  gameEnded = false;
 
   if (gameInstance) {
     gameInstance.destroy(true);
@@ -198,7 +212,8 @@ function endGame() {
       .then(() => db.ref(`sessions/${currentSessionId}/status`).set("finished"))
       .then(() => {
         alert("Partita terminata! Punteggio: " + score);
-        resetStudentUI(); // NON rimuovere il player
+        removeAllFirebaseListeners();
+        resetStudentUI();
       });
   }
 }

@@ -260,10 +260,17 @@ function showAdminPanel() {
     table.innerHTML = "";
 
     Object.keys(data).forEach(uid => {
+      const teacher = data[uid];
+
+      // FILTRO: salta i docenti con email undefined o stringa "undefined"
+      if (!teacher.email || teacher.email === "undefined") {
+        return; // non aggiunge la riga alla tabella
+      }
+
       const row = document.createElement("tr");
 
       row.innerHTML = `
-        <td>${data[uid].email}</td>
+        <td>${teacher.email}</td>
         <td>${uid}</td>
         <td>
           <button onclick="approveTeacher('${uid}')">Approva</button>

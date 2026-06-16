@@ -31,12 +31,14 @@ auth.onAuthStateChanged(user => {
     // Mostra pannello admin
     showAdminPanel();
 
-    // 🔥 Ripristina sessione da localStorage
-    const saved = localStorage.getItem("currentSessionId");
-    if (saved) {
-      currentSessionId = saved;
-      loadLobby();
-    }
+    // 🔥 Ripristina sessione associata al docente
+    db.ref("teacherSessions/" + uid).once("value").then(snap => {
+      if (snap.exists()) {
+        currentSessionId = snap.val().sessionId;
+        localStorage.setItem("currentSessionId", currentSessionId);
+        loadLobby();
+      }
+    });
   });
 });
 
@@ -69,7 +71,7 @@ function loginTeacher() {
 }
 
 // =====================================
-// Creazione sessione
+// Creazione sessione (una sola per docente)
 // =====================================
 
 function createSession() {
@@ -82,24 +84,54 @@ function createSession() {
     return;
   }
 
-  currentSessionId = sessionId;
-
-  // 🔥 Salva sessione localmente
-  localStorage.setItem("currentSessionId", currentSessionId);
-
   const uid = auth.currentUser.uid;
 
-  db.ref("sessions/" + currentSessionId).set({
-    status: "waiting",
-    teacherId: uid
-  })
-  .then(() => {
-    sessionStatusEl.textContent = "Sessione creata: " + currentSessionId;
-    loadLobby();
-  })
-  .catch(err => {
-    sessionStatusEl.textContent = "Errore: " + err.message;
+  // 🔥 Controlla se esiste già una sessione per questo docente
+  db.ref("teacherSessions/" + uid).once("value").then(snap => {
+    if (snap.exists()) {
+      sessionStatusEl.textContent = "Hai già una sessione attiva: " + snap.val().sessionId;
+      return;
+    }
+
+    // 🔥 Crea la sessione
+    db.ref("sessions/" + sessionId).set({
+      status: "waiting",
+      teacherId: uid
+    })
+    .then(() => {
+      // 🔥 Salva la sessione associata al docente
+      return db.ref("teacherSessions/" + uid).set({
+        sessionId: sessionId
+      });
+    })
+    .then(() => {
+      currentSessionId = sessionId;
+      localStorage.setItem("currentSessionId", sessionId);
+      sessionStatusEl.textContent = "Sessione creata: " + sessionId;
+      loadLobby();
+    });
   });
+}
+
+// =====================================
+// Eliminazione sessione
+// =====================================
+
+function deleteSession() {
+  const uid = auth.currentUser.uid;
+
+  if (!currentSessionId) return;
+
+  db.ref("sessions/" + currentSessionId).remove()
+    .then(() => db.ref("teacherSessions/" + uid).remove())
+    .then(() => {
+      localStorage.removeItem("currentSessionId");
+      currentSessionId = null;
+
+      document.getElementById("playersList").innerHTML = "";
+      document.getElementById("scores").innerHTML = "";
+      document.getElementById("sessionStatus").textContent = "Sessione chiusa.";
+    });
 }
 
 // =====================================

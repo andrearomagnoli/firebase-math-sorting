@@ -219,15 +219,13 @@ function updateScores(sessionId) {
 
 
 // -----------------------------
-// GESTIONE FILE EXCEL
+// GESTIONE FILE EXCEL (3 colonne)
 // -----------------------------
 
 const excelInput = document.getElementById("excelFile");
 const uploadBtn = document.getElementById("uploadExcelBtn");
 const excelStatus = document.getElementById("excelStatus");
-
-// Bottone per eliminare il file (lo aggiungeremo in HTML)
-let deleteExcelBtn = null;
+const deleteExcelBtn = document.getElementById("deleteExcelBtn");
 
 // Carica Excel
 if (uploadBtn) {
@@ -257,52 +255,45 @@ function handleExcelUpload() {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-    // Rimuove intestazioni vuote
-    const cleaned = rows.filter(r => r.length >= 4);
+    // Filtra righe con almeno 3 colonne
+    const cleaned = rows.filter(r => r.length >= 3);
 
-    // Sovrascrive completamente i quesiti precedenti
     const questionsRef = db.ref(`sessions/${sessionId}/questions`);
-    questionsRef.set({}); // reset
+    questionsRef.set({}); // reset totale
 
     cleaned.forEach((row, index) => {
       if (index === 0) return; // salta intestazione
 
-      const [id, text, basket, correct] = row;
+      const [id, text, basket] = row;
 
       questionsRef.child(id).set({
         id,
         text,
-        basket,
-        correct
+        basket
       });
     });
 
     excelStatus.textContent = "File caricato correttamente.";
 
-    showDeleteExcelButton(sessionId);
+    deleteExcelBtn.style.display = "block";
     updateStartButtonVisibility(sessionId);
   };
 
   reader.readAsArrayBuffer(file);
 }
 
-// Mostra pulsante elimina file
-function showDeleteExcelButton(sessionId) {
-  if (!deleteExcelBtn) {
-    deleteExcelBtn = document.createElement("button");
-    deleteExcelBtn.className = "btn btn-outline-danger w-100 mt-2";
-    deleteExcelBtn.textContent = "Elimina file caricato";
+// Elimina file caricato
+if (deleteExcelBtn) {
+  deleteExcelBtn.addEventListener("click", () => {
+    const sessionId = document.getElementById("sessionId").value.trim();
+    if (!sessionId) return;
 
-    deleteExcelBtn.addEventListener("click", () => {
-      db.ref(`sessions/${sessionId}/questions`).remove();
-      excelStatus.textContent = "File eliminato.";
-      deleteExcelBtn.remove();
-      deleteExcelBtn = null;
-      updateStartButtonVisibility(sessionId);
-    });
+    db.ref(`sessions/${sessionId}/questions`).remove();
+    excelStatus.textContent = "File eliminato.";
 
-    excelStatus.parentNode.appendChild(deleteExcelBtn);
-  }
+    deleteExcelBtn.style.display = "none";
+    updateStartButtonVisibility(sessionId);
+  });
 }
 
 // Mostra/nasconde il pulsante Avvia partita

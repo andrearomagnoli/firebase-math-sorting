@@ -6,12 +6,12 @@ let currentSessionId = null;
 let sessionCode = null;
 
 // =========================
-// Sessione
+// Sessione (gestione login/logout + UI)
 // =========================
 
 auth.onAuthStateChanged(user => {
   if (!user) {
-    // Nessun utente loggato → mostra login
+    // Nessun utente → mostra login
     document.getElementById("loginForm").style.display = "block";
     document.getElementById("teacherPanel").style.display = "none";
     return;
@@ -22,24 +22,20 @@ auth.onAuthStateChanged(user => {
   // Controlla se è un docente approvato
   db.ref("teachers/" + uid).once("value").then(snap => {
     if (!snap.exists()) {
-      // Non è un docente approvato → logout forzato
+      // Non è un docente approvato → logout
       auth.signOut();
       return;
     }
 
-    // Utente valido → mostra dashboard docente
+    // Utente valido → mostra dashboard
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("teacherPanel").style.display = "block";
 
-    // Mostra pannello admin se esiste
-    if (typeof showAdminPanel === "function") {
-      showAdminPanel();
-    }
+    // Mostra pannello admin
+    showAdminPanel();
 
-    // Ricarica la lobby se serve
-    if (typeof loadLobby === "function") {
-      loadLobby();
-    }
+    // Ricarica lobby se esiste
+    loadLobby();
   });
 });
 
@@ -60,25 +56,9 @@ function loginTeacher() {
   }
 
   auth.signInWithEmailAndPassword(email, pass)
-  .then(() => {
-    const uid = auth.currentUser.uid;
-
-    return db.ref("teachers/" + uid).once("value");
-  })
-  .then(snap => {
-    if (!snap.exists()) {
-      throw new Error("Account non autorizzato. Contatta l'amministratore.");
-    }
-
-    document.getElementById("loginSection").style.display = "none";
-    document.getElementById("teacherPanel").style.display = "block";
-
-    // Mostra pannello admin
-    showAdminPanel();
-  })
-  .catch(err => {
-    document.getElementById("loginError").textContent = err.message;
-  });
+    .catch(err => {
+      errorEl.textContent = err.message;
+    });
 }
 
 // =========================
@@ -158,10 +138,7 @@ function uploadExcel() {
         const bucket = row.Cesta;
         const correctAnswer = row.RispostaCorretta || null;
 
-        if (!id || !text || !bucket) {
-          // Riga non valida, la salto
-          return;
-        }
+        if (!id || !text || !bucket) return;
 
         updates[id] = {
           text: text,
@@ -195,6 +172,13 @@ function uploadExcel() {
 // =========================
 // Lobby: studenti collegati
 // =========================
+
+function loadLobby() {
+  if (currentSessionId) {
+    watchLobby();
+    watchScores();
+  }
+}
 
 function watchLobby() {
   const playersListEl = document.getElementById("playersList");
@@ -266,7 +250,6 @@ function watchScores() {
       return;
     }
 
-    // Ordino per punteggio decrescente
     entries.sort((a, b) => {
       const scoreA = a[1].score || 0;
       const scoreB = b[1].score || 0;
@@ -289,7 +272,6 @@ function watchScores() {
 // Amministrazione utenti
 // =========================
 
-// Mostra pannello admin solo ai docenti approvati
 function showAdminPanel() {
   document.getElementById("adminPanel").style.display = "block";
 
@@ -301,10 +283,7 @@ function showAdminPanel() {
     Object.keys(data).forEach(uid => {
       const teacher = data[uid];
 
-      // FILTRO: salta i docenti con email undefined o stringa "undefined"
-      if (!teacher.email || teacher.email === "undefined") {
-        return; // non aggiunge la riga alla tabella
-      }
+      if (!teacher.email || teacher.email === "undefined") return;
 
       const row = document.createElement("tr");
 
@@ -322,26 +301,22 @@ function showAdminPanel() {
   });
 }
 
-// APPROVAZIONE DOCENTE
 function approveTeacher(uid) {
   db.ref("pendingTeachers/" + uid).once("value")
     .then(snap => {
       const data = snap.val();
       if (!data) return;
 
-      // Copia in teachers/<uid>
       return db.ref("teachers/" + uid).set({
         email: data.email
       });
     })
     .then(() => {
-      // Rimuovi da pending
       return db.ref("pendingTeachers/" + uid).remove();
     })
     .catch(err => console.error(err));
 }
 
-// RIFIUTO DOCENTE
 function rejectTeacher(uid) {
   db.ref("pendingTeachers/" + uid).remove();
 }
@@ -351,8 +326,5 @@ function rejectTeacher(uid) {
 // =========================
 
 document.getElementById("logoutBtn").addEventListener("click", () => {
-  auth.signOut().then(() => {
-    document.getElementById("teacherPanel").style.display = "none";
-    document.getElementById("loginForm").style.display = "block";
-  });
+  auth.signOut();
 });

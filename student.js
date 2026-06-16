@@ -190,7 +190,7 @@ function endGame() {
       })
       .then(() => {
         alert("Partita terminata! Punteggio: " + score);
-        leaveSession();
+        resetStudentUI();
       });
   }
 }

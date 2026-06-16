@@ -6,6 +6,7 @@ let studentId = null;
 let hasJoined = false;
 
 let gameInstance = null;
+let gameEnded = false;
 
 // TIMER E PUNTEGGIO
 let timeLeft = 10;
@@ -99,7 +100,7 @@ function enterSession(sessionId, name) {
       leaveSession();
     }
 
-    if (snap.val().status === "finished") {
+    if (snap.val().status === "finished" && !gameEnded) {
       alert("La partita è terminata.");
       leaveSession();
     }
@@ -182,14 +183,13 @@ function startGame() {
 // 6) FINE PARTITA
 // ---------------------------------------------------------
 function endGame() {
-  if (currentSessionId && studentId) {
+  if (gameEnded) return;
+  gameEnded = true;
 
-    // 1) Salva il punteggio
+  if (currentSessionId && studentId) {
     db.ref(`sessions/${currentSessionId}/players/${studentId}/score`)
       .set(score)
       .then(() => {
-
-        // 2) Solo dopo segna la sessione come terminata
         return db.ref(`sessions/${currentSessionId}/status`).set("finished");
       })
       .then(() => {

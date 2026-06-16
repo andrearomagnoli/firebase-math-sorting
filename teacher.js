@@ -115,6 +115,9 @@ function loadSessionStatus() {
     statusBox.textContent = "Sessione attiva";
     if (data.status === "waiting") {
       startBox.style.display = "block";   // mostra "Avvia partita"
+    } else if (data.status === "finished"){
+      startBox.style.display = "none"; // nascondi avvia partita
+      activeBox.style.display = "block"; // mantieni visibile
     } else {
       startBox.style.display = "none";    // nasconde dopo l’avvio
     }

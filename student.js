@@ -146,10 +146,20 @@ function enterSession(sessionId, name) {
 // ---------------------------------------------------------
 function leaveSessionManual() {
   if (currentSessionId && studentId) {
-    db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove();
+
+    // 1) Rimuovi lo studente dal database
+    db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove()
+      .then(() => {
+        // 2) Solo dopo rimuovi i listener
+        removeAllFirebaseListeners();
+        resetStudentUI();
+      });
+
+  } else {
+    // Caso raro: nessuna sessione attiva
+    removeAllFirebaseListeners();
+    resetStudentUI();
   }
-  removeAllFirebaseListeners();
-  resetStudentUI();
 }
 
 

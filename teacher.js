@@ -33,6 +33,9 @@ function loginTeacher() {
 
     document.getElementById("loginSection").style.display = "none";
     document.getElementById("teacherPanel").style.display = "block";
+
+    // Mostra pannello admin
+    showAdminPanel();
   })
   .catch(err => {
     document.getElementById("loginError").textContent = err.message;
@@ -242,3 +245,58 @@ function watchScores() {
     scoresEl.innerHTML = html;
   });
 }
+
+// =========================
+// Amministrazione utenti
+// =========================
+
+// Mostra pannello admin solo ai docenti approvati
+function showAdminPanel() {
+  document.getElementById("adminPanel").style.display = "block";
+
+  db.ref("pendingTeachers").on("value", snap => {
+    const data = snap.val() || {};
+    const table = document.getElementById("pendingTable");
+    table.innerHTML = "";
+
+    Object.keys(data).forEach(uid => {
+      const row = document.createElement("tr");
+
+      row.innerHTML = `
+        <td>${data[uid].email}</td>
+        <td>${uid}</td>
+        <td>
+          <button onclick="approveTeacher('${uid}')">Approva</button>
+          <button onclick="rejectTeacher('${uid}')">Rifiuta</button>
+        </td>
+      `;
+
+      table.appendChild(row);
+    });
+  });
+}
+
+// APPROVAZIONE DOCENTE
+function approveTeacher(uid) {
+  db.ref("pendingTeachers/" + uid).once("value")
+    .then(snap => {
+      const data = snap.val();
+      if (!data) return;
+
+      // Copia in teachers/<uid>
+      return db.ref("teachers/" + uid).set({
+        email: data.email
+      });
+    })
+    .then(() => {
+      // Rimuovi da pending
+      return db.ref("pendingTeachers/" + uid).remove();
+    })
+    .catch(err => console.error(err));
+}
+
+// RIFIUTO DOCENTE
+function rejectTeacher(uid) {
+  db.ref("pendingTeachers/" + uid).remove();
+}
+

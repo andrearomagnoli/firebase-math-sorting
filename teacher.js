@@ -7,6 +7,22 @@ const db = firebase.database();
 let currentSessionId = null;
 
 // =====================================
+// Mobile integration
+// =====================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  const loginBtn = document.getElementById("loginBtn");
+  const createBtn = document.getElementById("createSessionBtn");
+  const deleteBtn = document.getElementById("deleteSessionBtn");
+  const startBtn = document.getElementById("startSessionBtn");
+
+  if (loginBtn) loginBtn.addEventListener("click", loginTeacher);
+  if (createBtn) createBtn.addEventListener("click", createSession);
+  if (deleteBtn) deleteBtn.addEventListener("click", deleteSession);
+  if (startBtn) startBtn.addEventListener("click", startSession);
+});
+
+// =====================================
 // Login / Logout
 // =====================================
 

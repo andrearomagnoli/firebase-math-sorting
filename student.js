@@ -4,9 +4,10 @@ const db = firebase.database();
 let currentSessionId = null;
 let studentId = null;
 let hasJoined = false;
+
 let gameInstance = null;
 
-// Variabili di gioco
+// TIMER E PUNTEGGIO
 let timeLeft = 10;
 let score = 0;
 let timerText = null;
@@ -16,26 +17,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const joinBtn = document.getElementById("joinBtn");
   const exitBtn = document.getElementById("exitBtn");
 
-  // Listener mobile + desktop
   if (joinBtn) {
-    joinBtn.addEventListener("touchstart", e => {
-      e.preventDefault();
-      joinSession();
-    }, { passive: false });
-
+    joinBtn.addEventListener("touchstart", e => { e.preventDefault(); joinSession(); }, { passive: false });
     joinBtn.addEventListener("click", joinSession);
   }
 
   if (exitBtn) {
-    exitBtn.addEventListener("touchstart", e => {
-      e.preventDefault();
-      leaveSession();
-    }, { passive: false });
-
+    exitBtn.addEventListener("touchstart", e => { e.preventDefault(); leaveSession(); }, { passive: false });
     exitBtn.addEventListener("click", leaveSession);
   }
 });
 
+
+// ---------------------------------------------------------
+// 1) ENTRA NELLA SESSIONE (con controllo esistenza)
+// ---------------------------------------------------------
 function joinSession() {
   if (hasJoined) return;
   hasJoined = true;
@@ -52,7 +48,7 @@ function joinSession() {
     return;
   }
 
-  // 1) Controllo se la sessione esiste
+  // Controllo se la sessione esiste
   db.ref(`sessions/${sessionId}`).once("value").then(snap => {
     if (!snap.exists()) {
       alert("La sessione non esiste. Controlla il codice.");
@@ -60,11 +56,14 @@ function joinSession() {
       return;
     }
 
-    // 2) Se esiste, procedo con l’ingresso
     enterSession(sessionId, name);
   });
 }
 
+
+// ---------------------------------------------------------
+// 2) ENTRA NELLA SESSIONE (vero ingresso)
+// ---------------------------------------------------------
 function enterSession(sessionId, name) {
   currentSessionId = sessionId;
 
@@ -101,6 +100,10 @@ function enterSession(sessionId, name) {
   });
 }
 
+
+// ---------------------------------------------------------
+// 3) USCITA
+// ---------------------------------------------------------
 function leaveSession() {
   if (currentSessionId && studentId) {
     db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove();
@@ -109,6 +112,10 @@ function leaveSession() {
   resetStudentUI();
 }
 
+
+// ---------------------------------------------------------
+// 4) RESET UI
+// ---------------------------------------------------------
 function resetStudentUI() {
   document.getElementById("sessionId").style.display = "block";
   document.getElementById("displayName").style.display = "block";
@@ -121,15 +128,21 @@ function resetStudentUI() {
   currentSessionId = null;
   studentId = null;
   hasJoined = false;
+
+  if (gameInstance) {
+    gameInstance.destroy(true);
+    gameInstance = null;
+  }
 }
 
+
+// ---------------------------------------------------------
+// 5) AVVIO GIOCO
+// ---------------------------------------------------------
 function startGame() {
   const container = document.getElementById("gameContainer");
-
-  // Mostra il contenitore PRIMA di creare il gioco
   container.style.display = "block";
 
-  // Se esiste già un'istanza, la distruggo
   if (gameInstance) {
     gameInstance.destroy(true);
     gameInstance = null;
@@ -151,22 +164,25 @@ function startGame() {
   gameInstance = new Phaser.Game(config);
 }
 
+
+// ---------------------------------------------------------
+// 6) FINE PARTITA
+// ---------------------------------------------------------
 function endGame() {
-  // Salva punteggio nel database
   if (currentSessionId && studentId) {
     db.ref(`sessions/${currentSessionId}/players/${studentId}/score`).set(score);
   }
 
   alert("Partita terminata! Punteggio: " + score);
 
-  // Torna alla schermata iniziale
   leaveSession();
 }
 
-// Placeholder per il tuo gioco reale
-function preload() {
-  // Nessun asset, va bene così
-}
+
+// ---------------------------------------------------------
+// 7) SCENA PHASER
+// ---------------------------------------------------------
+function preload() {}
 
 function create() {
   timeLeft = 10;

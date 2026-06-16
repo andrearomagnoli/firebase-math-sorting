@@ -123,32 +123,47 @@ function resetStudentUI() {
   hasJoined = false;
 }
 
-function startGame() {
-  const container = document.getElementById("gameContainer");
+function create() {
+  timeLeft = 10;
+  score = 0;
 
-  // Mostra il contenitore PRIMA di creare il gioco
-  container.style.display = "block";
+  timerText = this.add.text(20, 20, "Tempo: 10", {
+    font: "24px Arial",
+    fill: "#000"
+  });
 
-  // Se esiste già un'istanza, la distruggo
-  if (gameInstance) {
-    gameInstance.destroy(true);
-    gameInstance = null;
+  scoreText = this.add.text(20, 60, "Punteggio: 0", {
+    font: "24px Arial",
+    fill: "#000"
+  });
+
+  this.time.addEvent({
+    delay: 1000,
+    callback: () => {
+      timeLeft--;
+      timerText.setText("Tempo: " + timeLeft);
+
+      score += Phaser.Math.Between(1, 5);
+      scoreText.setText("Punteggio: " + score);
+
+      if (timeLeft <= 0) {
+        endGame();
+      }
+    },
+    loop: true
+  });
+}
+
+function endGame() {
+  // Salva punteggio nel database
+  if (currentSessionId && studentId) {
+    db.ref(`sessions/${currentSessionId}/players/${studentId}/score`).set(score);
   }
 
-  const config = {
-    type: Phaser.AUTO,
-    width: 400,
-    height: 600,
-    parent: "gameContainer",
-    backgroundColor: "#ffffff",
-    scene: {
-      preload: preload,
-      create: create,
-      update: update
-    }
-  };
+  alert("Partita terminata! Punteggio: " + score);
 
-  gameInstance = new Phaser.Game(config);
+  // Torna alla schermata iniziale
+  leaveSession();
 }
 
 // Placeholder per il tuo gioco reale

@@ -26,6 +26,8 @@ function loginStudent() {
     .then(() => {
       document.getElementById("loginSection").style.display = "none";
       document.getElementById("studentPanel").style.display = "block";
+
+      currentUserId = auth.currentUser.uid;
     })
     .catch(err => {
       console.error(err);

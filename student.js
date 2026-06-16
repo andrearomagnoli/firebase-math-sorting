@@ -1,34 +1,42 @@
-// Variabili globali
-let currentSessionId = null;
-let studentId = null;
-
-// Inizializzazione Firebase (usa la tua configurazione)
-firebase.initializeApp(firebaseConfig);
+// Si assume che firebase.initializeApp(firebaseConfig) sia già chiamato in firebase-config.js
 const db = firebase.database();
 
-// Event listeners per mobile e desktop
+let currentSessionId = null;
+let studentId = null;
+let hasJoined = false;
+
 document.addEventListener("DOMContentLoaded", () => {
   const joinBtn = document.getElementById("joinBtn");
   const exitBtn = document.getElementById("exitBtn");
 
   if (joinBtn) {
     joinBtn.addEventListener("click", joinSession);
-    joinBtn.addEventListener("touchstart", joinSession);
+    joinBtn.addEventListener("touchstart", joinSession, { passive: false });
   }
 
   if (exitBtn) {
     exitBtn.addEventListener("click", leaveSession);
-    exitBtn.addEventListener("touchstart", leaveSession);
+    exitBtn.addEventListener("touchstart", leaveSession, { passive: false });
   }
 });
 
-// Funzione per entrare nella sessione
-function joinSession() {
-  const sessionId = document.getElementById("sessionId").value.trim();
-  const name = document.getElementById("displayName").value.trim();
+function joinSession(event) {
+  if (event && event.type === "touchstart") {
+    event.preventDefault();
+  }
+
+  if (hasJoined) return;
+  hasJoined = true;
+
+  const sessionIdInput = document.getElementById("sessionId");
+  const displayNameInput = document.getElementById("displayName");
+
+  const sessionId = sessionIdInput.value.trim();
+  const name = displayNameInput.value.trim();
 
   if (!sessionId || !name) {
     alert("Inserisci codice sessione e cognome.");
+    hasJoined = false;
     return;
   }
 
@@ -42,15 +50,15 @@ function joinSession() {
 
   studentId = newPlayer.key;
 
-  // Nascondi form e mostra pulsante Esci
-  document.getElementById("sessionId").style.display = "none";
-  document.getElementById("displayName").style.display = "none";
+  sessionIdInput.style.display = "none";
+  displayNameInput.style.display = "none";
   document.getElementById("joinBtn").style.display = "none";
   document.getElementById("exitBtn").style.display = "block";
 
-  document.getElementById("status").textContent = "In attesa che il docente avvii la partita.";
+  document.getElementById("status").textContent =
+    "In attesa che il docente avvii la partita.";
 
-  // Ascolta eliminazione sessione
+  // Se la sessione viene eliminata dal docente
   db.ref(`sessions/${sessionId}`).on("value", snap => {
     if (!snap.exists()) {
       alert("La sessione è stata chiusa dal docente.");
@@ -58,7 +66,7 @@ function joinSession() {
     }
   });
 
-  // Ascolta avvio partita
+  // Avvio partita
   db.ref(`sessions/${sessionId}/status`).on("value", snap => {
     if (snap.val() === "started") {
       startGame();
@@ -66,8 +74,11 @@ function joinSession() {
   });
 }
 
-// Funzione per uscire dalla sessione
-function leaveSession() {
+function leaveSession(event) {
+  if (event && event.type === "touchstart") {
+    event.preventDefault();
+  }
+
   if (currentSessionId && studentId) {
     db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove();
   }
@@ -75,7 +86,6 @@ function leaveSession() {
   resetStudentUI();
 }
 
-// Reset UI studente
 function resetStudentUI() {
   document.getElementById("sessionId").style.display = "block";
   document.getElementById("displayName").style.display = "block";
@@ -83,14 +93,13 @@ function resetStudentUI() {
   document.getElementById("exitBtn").style.display = "none";
 
   document.getElementById("status").textContent = "In attesa…";
-
   document.getElementById("gameContainer").style.display = "none";
 
   currentSessionId = null;
   studentId = null;
+  hasJoined = false;
 }
 
-// Avvio del gioco
 function startGame() {
   document.getElementById("gameContainer").style.display = "block";
 
@@ -109,6 +118,7 @@ function startGame() {
   new Phaser.Game(config);
 }
 
+// Placeholder per il tuo gioco reale
 function preload() {}
 function create() {}
 function update() {}

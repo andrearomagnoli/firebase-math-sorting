@@ -1,121 +1,114 @@
-// =====================================
 // Variabili globali
-// =====================================
+let currentSessionId = null;
+let studentId = null;
 
+// Inizializzazione Firebase (usa la tua configurazione)
+firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let currentSessionId = null;
-let currentUserId = null;
-let currentDisplayName = null;
+// Event listeners per mobile e desktop
+document.addEventListener("DOMContentLoaded", () => {
+  const joinBtn = document.getElementById("joinBtn");
+  const exitBtn = document.getElementById("exitBtn");
 
-// =====================================
-// Entrata nella sessione (senza login)
-// =====================================
+  if (joinBtn) {
+    joinBtn.addEventListener("click", joinSession);
+    joinBtn.addEventListener("touchstart", joinSession);
+  }
 
+  if (exitBtn) {
+    exitBtn.addEventListener("click", leaveSession);
+    exitBtn.addEventListener("touchstart", leaveSession);
+  }
+});
+
+// Funzione per entrare nella sessione
 function joinSession() {
   const sessionId = document.getElementById("sessionId").value.trim();
-  const displayName = document.getElementById("displayName").value.trim();
-  const statusEl = document.getElementById("status");
+  const name = document.getElementById("displayName").value.trim();
 
-  if (!sessionId || !displayName) {
-    statusEl.textContent = "Inserisci cognome e codice partita.";
+  if (!sessionId || !name) {
+    alert("Inserisci codice sessione e cognome.");
     return;
   }
 
   currentSessionId = sessionId;
-  currentDisplayName = displayName;
 
-  // 🔥 Genera ID persistente per lo studente
-  if (!localStorage.getItem("studentId")) {
-    localStorage.setItem("studentId", "guest_" + Math.random().toString(36).substring(2, 10));
-  }
-
-  currentUserId = localStorage.getItem("studentId");
-
-  // 🔥 Registra lo studente nella sessione
-  db.ref(`sessions/${currentSessionId}/players/${currentUserId}`).set({
-    displayName: currentDisplayName,
-    status: "waiting",
+  const playersRef = db.ref(`sessions/${sessionId}/players`);
+  const newPlayer = playersRef.push({
+    name: name,
     score: 0
   });
 
-  // 🔥 Ascolta lo stato della sessione
-  db.ref(`sessions/${currentSessionId}/status`).on("value", snap => {
-    const status = snap.val();
-    statusEl.textContent = "Stato sessione: " + status;
+  studentId = newPlayer.key;
 
-    if (status === "running") {
+  // Nascondi form e mostra pulsante Esci
+  document.getElementById("sessionId").style.display = "none";
+  document.getElementById("displayName").style.display = "none";
+  document.getElementById("joinBtn").style.display = "none";
+  document.getElementById("exitBtn").style.display = "block";
+
+  document.getElementById("status").textContent = "In attesa che il docente avvii la partita.";
+
+  // Ascolta eliminazione sessione
+  db.ref(`sessions/${sessionId}`).on("value", snap => {
+    if (!snap.exists()) {
+      alert("La sessione è stata chiusa dal docente.");
+      leaveSession();
+    }
+  });
+
+  // Ascolta avvio partita
+  db.ref(`sessions/${sessionId}/status`).on("value", snap => {
+    if (snap.val() === "started") {
       startGame();
     }
   });
 }
 
-// =====================================
+// Funzione per uscire dalla sessione
+function leaveSession() {
+  if (currentSessionId && studentId) {
+    db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove();
+  }
+
+  resetStudentUI();
+}
+
+// Reset UI studente
+function resetStudentUI() {
+  document.getElementById("sessionId").style.display = "block";
+  document.getElementById("displayName").style.display = "block";
+  document.getElementById("joinBtn").style.display = "block";
+  document.getElementById("exitBtn").style.display = "none";
+
+  document.getElementById("status").textContent = "In attesa…";
+
+  document.getElementById("gameContainer").style.display = "none";
+
+  currentSessionId = null;
+  studentId = null;
+}
+
 // Avvio del gioco
-// =====================================
-
 function startGame() {
-  const container = document.getElementById("gameContainer");
-  container.style.display = "block";
+  document.getElementById("gameContainer").style.display = "block";
 
-  db.ref(`sessions/${currentSessionId}/questions`).once("value").then(snap => {
-    const questions = snap.val() || {};
-
-    runGame(questions, (finalScore) => {
-      endGame(finalScore);
-    });
-  });
-}
-
-// =====================================
-// Placeholder del gioco (da sostituire con Phaser)
-// =====================================
-
-function runGame(questions, callbackEnd) {
-  const container = document.getElementById("gameContainer");
-
-  container.innerHTML = `
-    <div style="padding:20px; font-size:20px;">
-      Gioco in esecuzione...
-      <br><br>
-      <span id="timer"></span><br>
-      <span id="score"></span>
-    </div>
-  `;
-
-  let score = 0;
-  let time = 10;
-
-  const timerEl = document.getElementById("timer");
-  const scoreEl = document.getElementById("score");
-
-  const interval = setInterval(() => {
-    time--;
-    score += Math.floor(Math.random() * 3);
-
-    timerEl.textContent = "Tempo: " + time;
-    scoreEl.textContent = "Punteggio: " + score;
-
-    if (time <= 0) {
-      clearInterval(interval);
-      callbackEnd(score);
+  const config = {
+    type: Phaser.AUTO,
+    width: 400,
+    height: 600,
+    parent: "gameContainer",
+    scene: {
+      preload: preload,
+      create: create,
+      update: update
     }
-  }, 1000);
+  };
+
+  new Phaser.Game(config);
 }
 
-// =====================================
-// Fine partita
-// =====================================
-
-function endGame(score) {
-  db.ref(`sessions/${currentSessionId}/players/${currentUserId}/score`).set(score);
-  db.ref(`sessions/${currentSessionId}/players/${currentUserId}/status`).set("finished");
-
-  const container = document.getElementById("gameContainer");
-  container.innerHTML = `
-    <div style="padding:20px; font-size:20px;">
-      Partita terminata!<br><br>
-      Punteggio finale: ${score}
-    </div>
-  `;
-}
+function preload() {}
+function create() {}
+function update() {}

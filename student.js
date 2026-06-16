@@ -93,20 +93,20 @@ function enterSession(sessionId, name) {
   document.getElementById("status").textContent =
     "In attesa che il docente avvii la partita.";
 
-  // Sessione eliminata dal docente
+  // LISTENER 1 — Il docente elimina la sessione
+  // (questo è l’unico caso in cui lo studente deve essere espulso)
   db.ref(`sessions/${sessionId}`).on("value", snap => {
     if (!snap.exists()) {
       alert("La sessione è stata chiusa dal docente.");
-      leaveSession();
+      resetStudentUI();   // NON cancellare il punteggio
+      return;
     }
 
-    if (snap.val().status === "finished" && !gameEnded) {
-      alert("La partita è terminata.");
-      leaveSession();
-    }
+    // Se la sessione è "finished", NON fare nulla.
+    // endGame() gestisce già la fine della partita.
   });
 
-  // Avvio partita
+  // LISTENER 2 — Il docente avvia la partita
   db.ref(`sessions/${sessionId}/status`).on("value", snap => {
     if (snap.val() === "started") {
       startGame();

@@ -175,18 +175,22 @@ function updatePlayersList(sessionId) {
   list.innerHTML = "<ul></ul>";
   const ul = list.querySelector("ul");
 
-  db.ref(`sessions/${sessionId}/players`).on("value", snap => {
-    ul.innerHTML = "";
+  addTeacherListener(
+    db.ref(`sessions/${sessionId}/players`),
+    "value",
+    snap => {
+      ul.innerHTML = "";
 
-    snap.forEach(child => {
-      const player = child.val();
+      snap.forEach(child => {
+        const player = child.val();
 
-      const li = document.createElement("li");
-      li.textContent = player.name || "(senza nome)";
+        const li = document.createElement("li");
+        li.textContent = player.name || "(senza nome)";
 
-      ul.appendChild(li);
-    });
-  });
+        ul.appendChild(li);
+      });
+    }
+  );
 }
 
 // AGGIORNA PUNTEGGI
@@ -195,16 +199,20 @@ function updateScores(sessionId) {
   scoresBox.innerHTML = "<ol></ol>";
   const ol = scoresBox.querySelector("ol");
 
-  db.ref(`sessions/${sessionId}/players`).on("value", snap => {
-    ol.innerHTML = "";
+  addTeacherListener(
+    db.ref(`sessions/${sessionId}/players`),
+    "value",
+    snap => {
+      ol.innerHTML = "";
 
-    snap.forEach(child => {
-      const player = child.val();
+      snap.forEach(child => {
+        const player = child.val();
 
-      const li = document.createElement("li");
-      li.textContent = `${player.name || "(senza nome)"} – ${player.score || 0}`;
+        const li = document.createElement("li");
+        li.textContent = `${player.name || "(senza nome)"} – ${player.score || 0}`;
 
-      ol.appendChild(li);
-    });
-  });
+        ol.appendChild(li);
+      });
+    }
+  );
 }

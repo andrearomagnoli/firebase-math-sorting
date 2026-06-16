@@ -108,8 +108,12 @@ function loadSessionStatus() {
       statusBox.textContent = "Nessuna sessione attiva";
       activeBox.style.display = "none";
       startBox.style.display = "none";
+      document.getElementById("deleteSessionBtn").style.display = "none";
       return;
     }
+
+    // Se la sessione ESISTE, mostra il pulsante elimina
+    document.getElementById("deleteSessionBtn").style.display = "block";
 
     const data = snap.val();
     statusBox.textContent = "Sessione attiva";

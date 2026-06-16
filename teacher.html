@@ -6,114 +6,54 @@
   <link rel="stylesheet" href="style.css">
 
   <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-  <!-- SheetJS per leggere Excel -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 
 <body>
 
   <h1>Area Docente – Math Sorting Game</h1>
 
-  <!-- LOGIN DOCENTE -->
-  <div id="loginForm">
-    <section id="loginSection">
-      <h2>Login docente</h2>
+  <!-- LOGIN -->
+  <section id="loginForm">
+    <h2>Login Docente</h2>
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="loginTeacher()">Accedi</button>
+    <p id="loginError" style="color:red;"></p>
+  </section>
 
-      <input id="email" type="email" placeholder="Email docente">
-      <input id="password" type="password" placeholder="Password">
-      <button onclick="loginTeacher()">Accedi</button>
+  <!-- PANNELLO DOCENTE -->
+  <section id="teacherPanel" style="display:none;">
 
-      <p id="loginError" style="color:red;"></p>
-    </section>
-  </div>
+    <button id="logoutBtn">Logout</button>
 
-  <!-- PANNELLO DOCENTE (visibile solo se loggato e approvato) -->
-  <div id="teacherPanel" style="display:none;">
+    <h2>Gestione Sessione</h2>
+    <p id="sessionStatus"></p>
 
-    <!-- Barra superiore con logout -->
-    <section id="topBar">
-      <button id="logoutBtn">Logout</button>
-    </section>
+    <!-- BOX CREAZIONE SESSIONE -->
+    <div id="createSessionBox">
+      <input id="sessionId" placeholder="ID sessione">
+      <button onclick="createSession()">Crea sessione</button>
+    </div>
 
-    <!-- PANNELO ADMIN -->
-    <section id="adminPanel" style="display:none;">
-      <h2>Gestione docenti in attesa</h2>
-      <table border="1" cellpadding="6">
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>UID</th>
-            <th>Azioni</th>
-          </tr>
-        </thead>
-        <tbody id="pendingTable"></tbody>
-      </table>
-    </section>
+    <!-- BOX SESSIONE ATTIVA -->
+    <div id="activeSessionBox" style="display:none;">
+      <h3 id="activeSessionLabel"></h3>
+      <button onclick="deleteSession()">Elimina sessione</button>
+    </div>
 
-    <!-- PANNELLO PRINCIPALE DOCENTE -->
-    <section id="teacherMain">
+    <h2>Studenti collegati</h2>
+    <div id="playersList">Nessuno studente collegato</div>
 
-      <h2>Gestione sessione</h2>
+    <h2>Punteggi</h2>
+    <div id="scores">Nessun punteggio ancora</div>
 
-      <!-- CREAZIONE SESSIONE -->
-      <div>
-        <h3>Crea nuova sessione</h3>
-        <input id="sessionId" placeholder="ID sessione (es. 1A_2024)">
-        <button onclick="createSession()">Crea sessione</button>
-        <p id="sessionStatus"></p>
-      </div>
-
-      <hr>
-
-      <!-- UPLOAD EXCEL -->
-      <div>
-        <h3>Carica quesiti da Excel</h3>
-        <p>Struttura Excel richiesta: ID_Quesito | Testo | Cesta | RispostaCorretta</p>
-
-        <input type="file" id="excelFile" accept=".xlsx">
-        <button onclick="uploadExcel()">Carica quesiti</button>
-
-        <p id="excelStatus"></p>
-      </div>
-
-      <hr>
-
-      <!-- LOBBY -->
-      <div>
-        <h3>Lobby studenti</h3>
-        <div id="playersList" style="padding:10px; border:1px solid #ccc; min-height:50px;">
-          Nessuno studente collegato
-        </div>
-      </div>
-
-      <hr>
-
-      <!-- AVVIO PARTITA -->
-      <div>
-        <h3>Avvio partita</h3>
-        <button onclick="startSession()">Avvia partita</button>
-      </div>
-
-      <hr>
-
-      <!-- CLASSIFICA -->
-      <div>
-        <h3>Punteggi in tempo reale</h3>
-        <div id="scores" style="padding:10px; border:1px solid #ccc; min-height:50px;">
-          Nessun punteggio ancora
-        </div>
-      </div>
-
-    </section>
-  </div>
+  </section>
 
   <!-- SCRIPT -->
   <script src="firebase-config.js"></script>
-  <script src="app.js"></script>
   <script src="teacher.js"></script>
 
 </body>

@@ -24,20 +24,21 @@ auth.onAuthStateChanged(user => {
       return;
     }
 
-    // Mostra UI docente
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("teacherPanel").style.display = "block";
 
-    // Mostra pannello admin
-    showAdminPanel();
-
-    // 🔥 Ripristina sessione associata al docente
+    // Recupera sessione attiva
     db.ref("teacherSessions/" + uid).once("value").then(snap => {
       if (snap.exists()) {
         currentSessionId = snap.val().sessionId;
         localStorage.setItem("currentSessionId", currentSessionId);
         loadLobby();
+      } else {
+        currentSessionId = null;
+        localStorage.removeItem("currentSessionId");
       }
+
+      updateSessionUI();
     });
   });
 });
@@ -71,43 +72,59 @@ function loginTeacher() {
 }
 
 // =====================================
-// Creazione sessione (una sola per docente)
+// UI dinamica sessione
+// =====================================
+
+function updateSessionUI() {
+  const createBox = document.getElementById("createSessionBox");
+  const activeBox = document.getElementById("activeSessionBox");
+  const label = document.getElementById("activeSessionLabel");
+  const status = document.getElementById("sessionStatus");
+
+  if (currentSessionId) {
+    createBox.style.display = "none";
+    activeBox.style.display = "block";
+    label.textContent = "Sessione attiva: " + currentSessionId;
+    status.textContent = "Sessione attiva: " + currentSessionId;
+  } else {
+    createBox.style.display = "block";
+    activeBox.style.display = "none";
+    status.textContent = "Nessuna sessione attiva";
+  }
+}
+
+// =====================================
+// Creazione sessione
 // =====================================
 
 function createSession() {
   const sessionIdInput = document.getElementById("sessionId");
-  const sessionStatusEl = document.getElementById("sessionStatus");
   const sessionId = sessionIdInput.value.trim();
+  const uid = auth.currentUser.uid;
 
   if (!sessionId) {
-    sessionStatusEl.textContent = "Inserisci un ID sessione.";
+    document.getElementById("sessionStatus").textContent = "Inserisci un ID sessione.";
     return;
   }
 
-  const uid = auth.currentUser.uid;
-
-  // 🔥 Controlla se esiste già una sessione per questo docente
+  // Controlla se esiste già una sessione
   db.ref("teacherSessions/" + uid).once("value").then(snap => {
     if (snap.exists()) {
-      sessionStatusEl.textContent = "Hai già una sessione attiva: " + snap.val().sessionId;
+      document.getElementById("sessionStatus").textContent =
+        "Hai già una sessione attiva: " + snap.val().sessionId;
       return;
     }
 
-    // 🔥 Crea la sessione
+    // Crea sessione
     db.ref("sessions/" + sessionId).set({
       status: "waiting",
       teacherId: uid
     })
-    .then(() => {
-      // 🔥 Salva la sessione associata al docente
-      return db.ref("teacherSessions/" + uid).set({
-        sessionId: sessionId
-      });
-    })
+    .then(() => db.ref("teacherSessions/" + uid).set({ sessionId }))
     .then(() => {
       currentSessionId = sessionId;
       localStorage.setItem("currentSessionId", sessionId);
-      sessionStatusEl.textContent = "Sessione creata: " + sessionId;
+      updateSessionUI();
       loadLobby();
     });
   });
@@ -130,60 +147,9 @@ function deleteSession() {
 
       document.getElementById("playersList").innerHTML = "";
       document.getElementById("scores").innerHTML = "";
-      document.getElementById("sessionStatus").textContent = "Sessione chiusa.";
+
+      updateSessionUI();
     });
-}
-
-// =====================================
-// Upload Excel
-// =====================================
-
-function uploadExcel() {
-  const excelStatusEl = document.getElementById("excelStatus");
-  excelStatusEl.textContent = "";
-
-  if (!currentSessionId) {
-    excelStatusEl.textContent = "Crea prima una sessione.";
-    return;
-  }
-
-  const file = document.getElementById("excelFile").files[0];
-  if (!file) {
-    excelStatusEl.textContent = "Seleziona un file Excel.";
-    return;
-  }
-
-  const reader = new FileReader();
-
-  reader.onload = (e) => {
-    try {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet);
-
-      const updates = {};
-
-      rows.forEach(row => {
-        if (!row.ID_Quesito || !row.Testo || !row.Cesta) return;
-
-        updates[row.ID_Quesito] = {
-          text: row.Testo,
-          bucket: row.Cesta,
-          correctAnswer: row.RispostaCorretta || null
-        };
-      });
-
-      db.ref(`sessions/${currentSessionId}/questions`).set(updates)
-        .then(() => excelStatusEl.textContent = "Quesiti caricati.")
-        .catch(err => excelStatusEl.textContent = "Errore: " + err.message);
-
-    } catch (err) {
-      excelStatusEl.textContent = "Errore nella lettura del file.";
-    }
-  };
-
-  reader.readAsArrayBuffer(file);
 }
 
 // =====================================
@@ -199,36 +165,22 @@ function loadLobby() {
 function watchLobby() {
   const playersListEl = document.getElementById("playersList");
 
-  const ref = db.ref(`sessions/${currentSessionId}/players`);
-
-  ref.on("value", snap => {
+  db.ref(`sessions/${currentSessionId}/players`).on("value", snap => {
     const players = snap.val() || {};
 
-    const entries = Object.entries(players);
-
-    if (entries.length === 0) {
+    if (Object.keys(players).length === 0) {
       playersListEl.innerHTML = "Nessuno studente collegato";
       return;
     }
 
     let html = "<ul>";
-    entries.forEach(([uid, p]) => {
+    for (const [uid, p] of Object.entries(players)) {
       html += `<li>${p.displayName} – ${p.status}</li>`;
-    });
+    }
     html += "</ul>";
 
     playersListEl.innerHTML = html;
   });
-}
-
-// =====================================
-// Avvio partita
-// =====================================
-
-function startSession() {
-  if (!currentSessionId) return;
-
-  db.ref(`sessions/${currentSessionId}/status`).set("running");
 }
 
 // =====================================
@@ -238,68 +190,23 @@ function startSession() {
 function watchScores() {
   const scoresEl = document.getElementById("scores");
 
-  const ref = db.ref(`sessions/${currentSessionId}/players`);
-
-  ref.on("value", snap => {
+  db.ref(`sessions/${currentSessionId}/players`).on("value", snap => {
     const players = snap.val() || {};
 
-    const entries = Object.entries(players);
-
-    if (entries.length === 0) {
+    if (Object.keys(players).length === 0) {
       scoresEl.innerHTML = "Nessun punteggio ancora";
       return;
     }
 
-    entries.sort((a, b) => (b[1].score || 0) - (a[1].score || 0));
+    const sorted = Object.entries(players)
+      .sort((a, b) => (b[1].score || 0) - (a[1].score || 0));
 
     let html = "<ol>";
-    entries.forEach(([uid, p]) => {
+    sorted.forEach(([uid, p]) => {
       html += `<li>${p.displayName}: ${p.score || 0} punti</li>`;
     });
     html += "</ol>";
 
     scoresEl.innerHTML = html;
   });
-}
-
-// =====================================
-// Admin
-// =====================================
-
-function showAdminPanel() {
-  const table = document.getElementById("pendingTable");
-
-  db.ref("pendingTeachers").on("value", snap => {
-    const data = snap.val() || {};
-    table.innerHTML = "";
-
-    Object.entries(data).forEach(([uid, t]) => {
-      const row = document.createElement("tr");
-
-      row.innerHTML = `
-        <td>${t.email}</td>
-        <td>${uid}</td>
-        <td>
-          <button onclick="approveTeacher('${uid}')">Approva</button>
-          <button onclick="rejectTeacher('${uid}')">Rifiuta</button>
-        </td>
-      `;
-
-      table.appendChild(row);
-    });
-  });
-}
-
-function approveTeacher(uid) {
-  db.ref("pendingTeachers/" + uid).once("value").then(snap => {
-    const data = snap.val();
-    if (!data) return;
-
-    return db.ref("teachers/" + uid).set({ email: data.email });
-  })
-  .then(() => db.ref("pendingTeachers/" + uid).remove());
-}
-
-function rejectTeacher(uid) {
-  db.ref("pendingTeachers/" + uid).remove();
 }

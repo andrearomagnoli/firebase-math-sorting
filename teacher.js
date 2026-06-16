@@ -11,15 +11,11 @@ let currentSessionId = null;
 // =====================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  const loginBtn = document.getElementById("loginBtn");
-  const createBtn = document.getElementById("createSessionBtn");
-  const deleteBtn = document.getElementById("deleteSessionBtn");
-  const startBtn = document.getElementById("startSessionBtn");
-
-  if (loginBtn) loginBtn.addEventListener("click", loginTeacher);
-  if (createBtn) createBtn.addEventListener("click", createSession);
-  if (deleteBtn) deleteBtn.addEventListener("click", deleteSession);
-  if (startBtn) startBtn.addEventListener("click", startSession);
+  document.getElementById("loginBtn")?.addEventListener("click", loginTeacher);
+  document.getElementById("createSessionBtn")?.addEventListener("click", createSession);
+  document.getElementById("deleteSessionBtn")?.addEventListener("click", deleteSession);
+  document.getElementById("startSessionBtn")?.addEventListener("click", startSession);
+  document.getElementById("logoutBtn")?.addEventListener("click", () => auth.signOut());
 });
 
 // =====================================

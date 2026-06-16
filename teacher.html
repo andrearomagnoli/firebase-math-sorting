@@ -14,6 +14,9 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+  <!-- SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
   <style>
     body { background-color: #f5f7fa; }
     .card { border-radius: 12px; }
@@ -52,11 +55,11 @@
         <button id="logoutBtn" class="btn btn-outline-secondary">Logout</button>
       </div>
 
+      <!-- GESTIONE SESSIONE -->
       <div class="card shadow p-4 mb-4">
         <h2 class="h5">Gestione Sessione</h2>
         <p id="sessionStatus" class="text-muted"></p>
 
-        <!-- CREAZIONE SESSIONE -->
         <div id="createSessionBox">
           <div class="input-group mb-3">
             <input id="sessionId" class="form-control" placeholder="ID sessione">
@@ -64,7 +67,6 @@
           </div>
         </div>
 
-        <!-- SESSIONE ATTIVA -->
         <div id="activeSessionBox" style="display:none;">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h3 id="activeSessionLabel" class="h6 m-0"></h3>
@@ -72,12 +74,35 @@
           </div>
         </div>
 
-        <!-- AVVIO PARTITA -->
         <div id="startSessionBox" style="display:none;">
           <button id="startSessionBtn" class="btn btn-primary w-100">Avvia partita</button>
         </div>
       </div>
 
+      <!-- UPLOAD EXCEL -->
+      <div class="card shadow p-4 mb-4">
+        <h2 class="h5 mb-3">Carica quesiti da Excel</h2>
+
+        <p class="text-muted mb-2">
+          Struttura richiesta del file Excel:
+          <strong>ID_Quesito | Testo | Cesta | RispostaCorretta</strong>
+        </p>
+
+        <input type="file" id="excelFile" accept=".xlsx" class="form-control mb-3">
+
+        <button id="uploadExcelBtn" class="btn btn-primary w-100">
+          Carica quesiti
+        </button>
+
+        <p id="excelStatus" class="mt-3 text-center text-muted"></p>
+
+        <!-- Pulsante eliminazione file (gestito da JS: appare/scompare) -->
+        <button id="deleteExcelBtn" class="btn btn-outline-danger w-100 mt-2" style="display:none;">
+          Elimina file caricato
+        </button>
+      </div>
+
+      <!-- STUDENTI E PUNTEGGI -->
       <div class="row g-4">
 
         <div class="col-md-6">

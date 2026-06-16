@@ -3,6 +3,40 @@
 // =========================
 
 let currentSessionId = null;
+let sessionCode = null;
+
+// =========================
+// Sessione
+// =========================
+
+auth.onAuthStateChanged(user => {
+  if (!user) {
+    // Nessun utente loggato → torna al login
+    window.location.href = "login.html";
+    return;
+  }
+
+  const uid = user.uid;
+
+  // Controlla se è un docente approvato
+  db.ref("teachers/" + uid).once("value").then(snap => {
+    if (!snap.exists()) {
+      // Non è un docente approvato → logout
+      auth.signOut();
+      window.location.href = "login.html";
+      return;
+    }
+
+    // Ricostruisci la UI docente
+    document.getElementById("teacherPanel").style.display = "block";
+
+    // Mostra pannello admin (se previsto)
+    showAdminPanel();
+
+    // Ricarica eventuali dati della lobby
+    loadLobby();
+  });
+});
 
 // =========================
 // Login docente

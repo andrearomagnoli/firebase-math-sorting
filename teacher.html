@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Area Docente – Math Sorting Game</title>
-  <link rel="stylesheet" href="style.css">
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -32,19 +31,19 @@
     <h2>Gestione Sessione</h2>
     <p id="sessionStatus"></p>
 
-    <!-- BOX CREAZIONE SESSIONE -->
+    <!-- CREAZIONE SESSIONE -->
     <div id="createSessionBox">
       <input id="sessionId" placeholder="ID sessione">
       <button onclick="createSession()">Crea sessione</button>
     </div>
 
-    <!-- BOX SESSIONE ATTIVA -->
+    <!-- SESSIONE ATTIVA -->
     <div id="activeSessionBox" style="display:none;">
       <h3 id="activeSessionLabel"></h3>
       <button onclick="deleteSession()">Elimina sessione</button>
     </div>
 
-    <!-- Pulsante avvio partita -->
+    <!-- AVVIO PARTITA -->
     <div id="startSessionBox" style="display:none; margin-top:20px;">
       <button onclick="startSession()">Avvia partita</button>
     </div>
@@ -57,7 +56,6 @@
 
   </section>
 
-  <!-- SCRIPT -->
   <script src="firebase-config.js"></script>
   <script src="teacher.js"></script>
 

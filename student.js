@@ -1,4 +1,4 @@
-// Si assume che firebase.initializeApp(firebaseConfig) sia già chiamato in firebase-config.js
+// Firebase è già inizializzato in firebase-config.js
 const db = firebase.database();
 
 let currentSessionId = null;
@@ -9,22 +9,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const joinBtn = document.getElementById("joinBtn");
   const exitBtn = document.getElementById("exitBtn");
 
+  // Listener mobile + desktop
   if (joinBtn) {
+    joinBtn.addEventListener("touchstart", e => {
+      e.preventDefault();
+      joinSession();
+    }, { passive: false });
+
     joinBtn.addEventListener("click", joinSession);
-    joinBtn.addEventListener("touchstart", joinSession, { passive: false });
   }
 
   if (exitBtn) {
+    exitBtn.addEventListener("touchstart", e => {
+      e.preventDefault();
+      leaveSession();
+    }, { passive: false });
+
     exitBtn.addEventListener("click", leaveSession);
-    exitBtn.addEventListener("touchstart", leaveSession, { passive: false });
   }
 });
 
-function joinSession(event) {
-  if (event && event.type === "touchstart") {
-    event.preventDefault();
-  }
-
+function joinSession() {
   if (hasJoined) return;
   hasJoined = true;
 
@@ -42,6 +47,7 @@ function joinSession(event) {
 
   currentSessionId = sessionId;
 
+  // Salvataggio studente nel DB
   const playersRef = db.ref(`sessions/${sessionId}/players`);
   const newPlayer = playersRef.push({
     name: name,
@@ -50,6 +56,7 @@ function joinSession(event) {
 
   studentId = newPlayer.key;
 
+  // Nascondi form solo dopo aver letto i valori
   sessionIdInput.style.display = "none";
   displayNameInput.style.display = "none";
   document.getElementById("joinBtn").style.display = "none";
@@ -58,7 +65,7 @@ function joinSession(event) {
   document.getElementById("status").textContent =
     "In attesa che il docente avvii la partita.";
 
-  // Se la sessione viene eliminata dal docente
+  // Se il docente elimina la sessione
   db.ref(`sessions/${sessionId}`).on("value", snap => {
     if (!snap.exists()) {
       alert("La sessione è stata chiusa dal docente.");
@@ -74,11 +81,7 @@ function joinSession(event) {
   });
 }
 
-function leaveSession(event) {
-  if (event && event.type === "touchstart") {
-    event.preventDefault();
-  }
-
+function leaveSession() {
   if (currentSessionId && studentId) {
     db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove();
   }

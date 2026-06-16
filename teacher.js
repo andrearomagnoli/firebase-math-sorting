@@ -1,12 +1,12 @@
-// =========================
+// =====================================
 // Variabili globali
-// =========================
+// =====================================
 
 let currentSessionId = null;
 
-// =========================
-// Gestione sessione/login
-// =========================
+// =====================================
+// Login / Logout docente
+// =====================================
 
 auth.onAuthStateChanged(user => {
   if (!user) {
@@ -17,6 +17,7 @@ auth.onAuthStateChanged(user => {
 
   const uid = user.uid;
 
+  // Verifica che sia un docente approvato
   db.ref("teachers/" + uid).once("value").then(snap => {
     if (!snap.exists()) {
       auth.signOut();
@@ -30,7 +31,7 @@ auth.onAuthStateChanged(user => {
     // Mostra pannello admin
     showAdminPanel();
 
-    // RIPRISTINA SESSIONE DA LOCALSTORAGE
+    // 🔥 Ripristina sessione da localStorage
     const saved = localStorage.getItem("currentSessionId");
     if (saved) {
       currentSessionId = saved;
@@ -39,9 +40,15 @@ auth.onAuthStateChanged(user => {
   });
 });
 
-// =========================
+// Logout
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  localStorage.removeItem("currentSessionId");
+  auth.signOut();
+});
+
+// =====================================
 // Login docente
-// =========================
+// =====================================
 
 function loginTeacher() {
   const email = document.getElementById("email").value.trim();
@@ -61,9 +68,9 @@ function loginTeacher() {
     });
 }
 
-// =========================
+// =====================================
 // Creazione sessione
-// =========================
+// =====================================
 
 function createSession() {
   const sessionIdInput = document.getElementById("sessionId");
@@ -77,31 +84,27 @@ function createSession() {
 
   currentSessionId = sessionId;
 
-  // SALVA SESSIONE IN LOCALSTORAGE
+  // 🔥 Salva sessione localmente
   localStorage.setItem("currentSessionId", currentSessionId);
 
   const uid = auth.currentUser.uid;
 
-  const ref = db.ref("sessions/" + currentSessionId);
-
-  ref.set({
+  db.ref("sessions/" + currentSessionId).set({
     status: "waiting",
     teacherId: uid
   })
   .then(() => {
     sessionStatusEl.textContent = "Sessione creata: " + currentSessionId;
-    watchLobby();
-    watchScores();
+    loadLobby();
   })
   .catch(err => {
-    console.error(err);
-    sessionStatusEl.textContent = "Errore nella creazione della sessione: " + err.message;
+    sessionStatusEl.textContent = "Errore: " + err.message;
   });
 }
 
-// =========================
+// =====================================
 // Upload Excel
-// =========================
+// =====================================
 
 function uploadExcel() {
   const excelStatusEl = document.getElementById("excelStatus");
@@ -112,11 +115,9 @@ function uploadExcel() {
     return;
   }
 
-  const fileInput = document.getElementById("excelFile");
-  const file = fileInput.files[0];
-
+  const file = document.getElementById("excelFile").files[0];
   if (!file) {
-    excelStatusEl.textContent = "Seleziona un file Excel (.xlsx).";
+    excelStatusEl.textContent = "Seleziona un file Excel.";
     return;
   }
 
@@ -129,54 +130,33 @@ function uploadExcel() {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet);
 
-      if (!rows || rows.length === 0) {
-        excelStatusEl.textContent = "Il file Excel è vuoto o non leggibile.";
-        return;
-      }
-
-      const questionsRef = db.ref("sessions/" + currentSessionId + "/questions");
       const updates = {};
 
       rows.forEach(row => {
-        const id = row.ID_Quesito;
-        const text = row.Testo;
-        const bucket = row.Cesta;
-        const correctAnswer = row.RispostaCorretta || null;
+        if (!row.ID_Quesito || !row.Testo || !row.Cesta) return;
 
-        if (!id || !text || !bucket) return;
-
-        updates[id] = {
-          text: text,
-          bucket: bucket,
-          correctAnswer: correctAnswer
+        updates[row.ID_Quesito] = {
+          text: row.Testo,
+          bucket: row.Cesta,
+          correctAnswer: row.RispostaCorretta || null
         };
       });
 
-      questionsRef.set(updates)
-        .then(() => {
-          excelStatusEl.textContent = "Quesiti caricati correttamente.";
-        })
-        .catch(err => {
-          console.error(err);
-          excelStatusEl.textContent = "Errore nel salvataggio dei quesiti: " + err.message;
-        });
+      db.ref(`sessions/${currentSessionId}/questions`).set(updates)
+        .then(() => excelStatusEl.textContent = "Quesiti caricati.")
+        .catch(err => excelStatusEl.textContent = "Errore: " + err.message);
 
     } catch (err) {
-      console.error(err);
-      excelStatusEl.textContent = "Errore nella lettura del file Excel.";
+      excelStatusEl.textContent = "Errore nella lettura del file.";
     }
-  };
-
-  reader.onerror = () => {
-    excelStatusEl.textContent = "Errore nella lettura del file.";
   };
 
   reader.readAsArrayBuffer(file);
 }
 
-// =========================
+// =====================================
 // Lobby
-// =========================
+// =====================================
 
 function loadLobby() {
   if (!currentSessionId) return;
@@ -187,15 +167,11 @@ function loadLobby() {
 function watchLobby() {
   const playersListEl = document.getElementById("playersList");
 
-  if (!currentSessionId) {
-    playersListEl.innerHTML = "Nessuna sessione attiva";
-    return;
-  }
+  const ref = db.ref(`sessions/${currentSessionId}/players`);
 
-  const playersRef = db.ref(`sessions/${currentSessionId}/players`);
-
-  playersRef.on("value", snap => {
+  ref.on("value", snap => {
     const players = snap.val() || {};
+
     const entries = Object.entries(players);
 
     if (entries.length === 0) {
@@ -204,52 +180,37 @@ function watchLobby() {
     }
 
     let html = "<ul>";
-    for (const [uid, player] of entries) {
-      const name = player.displayName || uid;
-      const status = player.status || "unknown";
-      html += `<li>${name} – stato: ${status}</li>`;
-    }
+    entries.forEach(([uid, p]) => {
+      html += `<li>${p.displayName} – ${p.status}</li>`;
+    });
     html += "</ul>";
 
     playersListEl.innerHTML = html;
   });
 }
 
-// =========================
+// =====================================
 // Avvio partita
-// =========================
+// =====================================
 
 function startSession() {
-  const sessionStatusEl = document.getElementById("sessionStatus");
+  if (!currentSessionId) return;
 
-  if (!currentSessionId) {
-    sessionStatusEl.textContent = "Crea prima una sessione.";
-    return;
-  }
-
-  db.ref("sessions/" + currentSessionId + "/status").set("running")
-    .then(() => {
-      sessionStatusEl.textContent = "Partita avviata.";
-    })
-    .catch(err => {
-      console.error(err);
-      sessionStatusEl.textContent = "Errore nell'avvio della partita: " + err.message;
-    });
+  db.ref(`sessions/${currentSessionId}/status`).set("running");
 }
 
-// =========================
+// =====================================
 // Punteggi
-// =========================
+// =====================================
 
 function watchScores() {
   const scoresEl = document.getElementById("scores");
 
-  if (!currentSessionId) return;
+  const ref = db.ref(`sessions/${currentSessionId}/players`);
 
-  const playersRef = db.ref("sessions/" + currentSessionId + "/players");
-
-  playersRef.on("value", snap => {
+  ref.on("value", snap => {
     const players = snap.val() || {};
+
     const entries = Object.entries(players);
 
     if (entries.length === 0) {
@@ -257,17 +218,11 @@ function watchScores() {
       return;
     }
 
-    entries.sort((a, b) => {
-      const scoreA = a[1].score || 0;
-      const scoreB = b[1].score || 0;
-      return scoreB - scoreA;
-    });
+    entries.sort((a, b) => (b[1].score || 0) - (a[1].score || 0));
 
     let html = "<ol>";
-    entries.forEach(([uid, player]) => {
-      const name = player.displayName || uid;
-      const score = player.score || 0;
-      html += `<li>${name}: ${score} punti</li>`;
+    entries.forEach(([uid, p]) => {
+      html += `<li>${p.displayName}: ${p.score || 0} punti</li>`;
     });
     html += "</ol>";
 
@@ -275,27 +230,22 @@ function watchScores() {
   });
 }
 
-// =========================
+// =====================================
 // Admin
-// =========================
+// =====================================
 
 function showAdminPanel() {
-  document.getElementById("adminPanel").style.display = "block";
+  const table = document.getElementById("pendingTable");
 
   db.ref("pendingTeachers").on("value", snap => {
     const data = snap.val() || {};
-    const table = document.getElementById("pendingTable");
     table.innerHTML = "";
 
-    Object.keys(data).forEach(uid => {
-      const teacher = data[uid];
-
-      if (!teacher.email || teacher.email === "undefined") return;
-
+    Object.entries(data).forEach(([uid, t]) => {
       const row = document.createElement("tr");
 
       row.innerHTML = `
-        <td>${teacher.email}</td>
+        <td>${t.email}</td>
         <td>${uid}</td>
         <td>
           <button onclick="approveTeacher('${uid}')">Approva</button>
@@ -309,30 +259,15 @@ function showAdminPanel() {
 }
 
 function approveTeacher(uid) {
-  db.ref("pendingTeachers/" + uid).once("value")
-    .then(snap => {
-      const data = snap.val();
-      if (!data) return;
+  db.ref("pendingTeachers/" + uid).once("value").then(snap => {
+    const data = snap.val();
+    if (!data) return;
 
-      return db.ref("teachers/" + uid).set({
-        email: data.email
-      });
-    })
-    .then(() => {
-      return db.ref("pendingTeachers/" + uid).remove();
-    })
-    .catch(err => console.error(err));
+    return db.ref("teachers/" + uid).set({ email: data.email });
+  })
+  .then(() => db.ref("pendingTeachers/" + uid).remove());
 }
 
 function rejectTeacher(uid) {
   db.ref("pendingTeachers/" + uid).remove();
 }
-
-// =========================
-// Logout
-// =========================
-
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  localStorage.removeItem("currentSessionId");
-  auth.signOut();
-});

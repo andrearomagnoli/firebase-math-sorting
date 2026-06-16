@@ -123,35 +123,32 @@ function resetStudentUI() {
   hasJoined = false;
 }
 
-function create() {
-  timeLeft = 10;
-  score = 0;
+function startGame() {
+  const container = document.getElementById("gameContainer");
 
-  timerText = this.add.text(20, 20, "Tempo: 10", {
-    font: "24px Arial",
-    fill: "#000"
-  });
+  // Mostra il contenitore PRIMA di creare il gioco
+  container.style.display = "block";
 
-  scoreText = this.add.text(20, 60, "Punteggio: 0", {
-    font: "24px Arial",
-    fill: "#000"
-  });
+  // Se esiste già un'istanza, la distruggo
+  if (gameInstance) {
+    gameInstance.destroy(true);
+    gameInstance = null;
+  }
 
-  this.time.addEvent({
-    delay: 1000,
-    callback: () => {
-      timeLeft--;
-      timerText.setText("Tempo: " + timeLeft);
+  const config = {
+    type: Phaser.AUTO,
+    width: 400,
+    height: 600,
+    parent: "gameContainer",
+    backgroundColor: "#ffffff",
+    scene: {
+      preload: preload,
+      create: create,
+      update: update
+    }
+  };
 
-      score += Phaser.Math.Between(1, 5);
-      scoreText.setText("Punteggio: " + score);
-
-      if (timeLeft <= 0) {
-        endGame();
-      }
-    },
-    loop: true
-  });
+  gameInstance = new Phaser.Game(config);
 }
 
 function endGame() {
@@ -172,6 +169,9 @@ function preload() {
 }
 
 function create() {
+  timeLeft = 10;
+  score = 0;
+
   timerText = this.add.text(20, 20, "Tempo: 10", {
     font: "24px Arial",
     fill: "#000"
@@ -182,14 +182,12 @@ function create() {
     fill: "#000"
   });
 
-  // Timer che scala ogni secondo
   this.time.addEvent({
     delay: 1000,
     callback: () => {
       timeLeft--;
       timerText.setText("Tempo: " + timeLeft);
 
-      // Punteggio fittizio che cresce
       score += Phaser.Math.Between(1, 5);
       scoreText.setText("Punteggio: " + score);
 

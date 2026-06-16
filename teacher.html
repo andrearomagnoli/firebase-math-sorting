@@ -18,87 +18,91 @@
 
   <h1>Area Docente – Math Sorting Game</h1>
 
-  <!-- LOGIN DOCENTE -->
-  <section id="loginSection">
-    <h2>Login docente</h2>
+  <div id="loginForm">
+    <!-- LOGIN DOCENTE -->
+    <section id="loginSection">
+      <h2>Login docente</h2>
 
-    <input id="email" type="email" placeholder="Email docente">
-    <input id="password" type="password" placeholder="Password">
-    <button onclick="loginTeacher()">Accedi</button>
+      <input id="email" type="email" placeholder="Email docente">
+      <input id="password" type="password" placeholder="Password">
+      <button onclick="loginTeacher()">Accedi</button>
 
-    <p id="loginError" style="color:red;"></p>
-  </section>
+      <p id="loginError" style="color:red;"></p>
+    </section>
+  </div>
 
-  <!-- PANNELO ADMIN -->
-  <section id="adminPanel" style="display:none;">
-    <h2>Gestione docenti in attesa</h2>
-    <table border="1" cellpadding="6">
-      <thead>
-        <tr>
-          <th>Email</th>
-          <th>UID</th>
-          <th>Azioni</th>
-        </tr>
-      </thead>
-      <tbody id="pendingTable"></tbody>
-    </table>
-  </section>
+  <div id="teacherPanel" style="display:none;">
+    <!-- PANNELO ADMIN -->
+    <section id="adminPanel" style="display:none;">
+      <h2>Gestione docenti in attesa</h2>
+      <table border="1" cellpadding="6">
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>UID</th>
+            <th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody id="pendingTable"></tbody>
+      </table>
+    </section>
 
-  <!-- PANNELLO DOCENTE -->
-  <section id="teacherPanel" style="display:none;">
+    <!-- PANNELLO DOCENTE -->
+    <section id="teacherPanel" style="display:none;">
 
-    <h2>Gestione sessione</h2>
+      <h2>Gestione sessione</h2>
 
-    <!-- CREAZIONE SESSIONE -->
-    <div>
-      <h3>Crea nuova sessione</h3>
-      <input id="sessionId" placeholder="ID sessione (es. 1A_2024)">
-      <button onclick="createSession()">Crea sessione</button>
-      <p id="sessionStatus"></p>
-    </div>
-
-    <hr>
-
-    <!-- UPLOAD EXCEL -->
-    <div>
-      <h3>Carica quesiti da Excel</h3>
-      <p>Struttura Excel richiesta: ID_Quesito | Testo | Cesta | RispostaCorretta</p>
-
-      <input type="file" id="excelFile" accept=".xlsx">
-      <button onclick="uploadExcel()">Carica quesiti</button>
-
-      <p id="excelStatus"></p>
-    </div>
-
-    <hr>
-
-    <!-- LOBBY -->
-    <div>
-      <h3>Lobby studenti</h3>
-      <div id="playersList" style="padding:10px; border:1px solid #ccc; min-height:50px;">
-        Nessuno studente collegato
+      <!-- CREAZIONE SESSIONE -->
+      <div>
+        <h3>Crea nuova sessione</h3>
+        <input id="sessionId" placeholder="ID sessione (es. 1A_2024)">
+        <button onclick="createSession()">Crea sessione</button>
+        <p id="sessionStatus"></p>
       </div>
-    </div>
 
-    <hr>
+      <hr>
 
-    <!-- AVVIO PARTITA -->
-    <div>
-      <h3>Avvio partita</h3>
-      <button onclick="startSession()">Avvia partita</button>
-    </div>
+      <!-- UPLOAD EXCEL -->
+      <div>
+        <h3>Carica quesiti da Excel</h3>
+        <p>Struttura Excel richiesta: ID_Quesito | Testo | Cesta | RispostaCorretta</p>
 
-    <hr>
+        <input type="file" id="excelFile" accept=".xlsx">
+        <button onclick="uploadExcel()">Carica quesiti</button>
 
-    <!-- CLASSIFICA -->
-    <div>
-      <h3>Punteggi in tempo reale</h3>
-      <div id="scores" style="padding:10px; border:1px solid #ccc; min-height:50px;">
-        Nessun punteggio ancora
+        <p id="excelStatus"></p>
       </div>
-    </div>
 
-  </section>
+      <hr>
+
+      <!-- LOBBY -->
+      <div>
+        <h3>Lobby studenti</h3>
+        <div id="playersList" style="padding:10px; border:1px solid #ccc; min-height:50px;">
+          Nessuno studente collegato
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- AVVIO PARTITA -->
+      <div>
+        <h3>Avvio partita</h3>
+        <button onclick="startSession()">Avvia partita</button>
+      </div>
+
+      <hr>
+
+      <!-- CLASSIFICA -->
+      <div>
+        <h3>Punteggi in tempo reale</h3>
+        <div id="scores" style="padding:10px; border:1px solid #ccc; min-height:50px;">
+          Nessun punteggio ancora
+        </div>
+      </div>
+
+    </section>
+  </div>
 
   <!-- SCRIPT -->
   <script src="firebase-config.js"></script>

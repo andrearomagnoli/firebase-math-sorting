@@ -11,8 +11,9 @@ let sessionCode = null;
 
 auth.onAuthStateChanged(user => {
   if (!user) {
-    // Nessun utente loggato → torna al login
-    window.location.href = "login.html";
+    // Nessun utente loggato → mostra login
+    document.getElementById("loginForm").style.display = "block";
+    document.getElementById("teacherPanel").style.display = "none";
     return;
   }
 
@@ -21,20 +22,24 @@ auth.onAuthStateChanged(user => {
   // Controlla se è un docente approvato
   db.ref("teachers/" + uid).once("value").then(snap => {
     if (!snap.exists()) {
-      // Non è un docente approvato → logout
+      // Non è un docente approvato → logout forzato
       auth.signOut();
-      window.location.href = "login.html";
       return;
     }
 
-    // Ricostruisci la UI docente
+    // Utente valido → mostra dashboard docente
+    document.getElementById("loginForm").style.display = "none";
     document.getElementById("teacherPanel").style.display = "block";
 
-    // Mostra pannello admin (se previsto)
-    showAdminPanel();
+    // Mostra pannello admin se esiste
+    if (typeof showAdminPanel === "function") {
+      showAdminPanel();
+    }
 
-    // Ricarica eventuali dati della lobby
-    loadLobby();
+    // Ricarica la lobby se serve
+    if (typeof loadLobby === "function") {
+      loadLobby();
+    }
   });
 });
 
@@ -341,3 +346,13 @@ function rejectTeacher(uid) {
   db.ref("pendingTeachers/" + uid).remove();
 }
 
+// =========================
+// Logout
+// =========================
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  auth.signOut().then(() => {
+    document.getElementById("teacherPanel").style.display = "none";
+    document.getElementById("loginForm").style.display = "block";
+  });
+});

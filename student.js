@@ -112,9 +112,16 @@ function enterSession(sessionId, name) {
     "value",
     snap => {
       if (!snap.exists()) {
-        if (!gameEnded) {
-          alert("La sessione è stata chiusa dal docente.");
+
+        // Se la partita è finita, NON notificare nulla
+        if (gameEnded) {
+          removeAllFirebaseListeners();
+          resetStudentUI();
+          return;
         }
+
+        // Se la partita NON è finita, notifica normalmente
+        alert("La sessione è stata chiusa dal docente.");
         removeAllFirebaseListeners();
         resetStudentUI();
       }

@@ -45,9 +45,22 @@ function joinSession() {
     return;
   }
 
+  // 1) Controllo se la sessione esiste
+  db.ref(`sessions/${sessionId}`).once("value").then(snap => {
+    if (!snap.exists()) {
+      alert("La sessione non esiste. Controlla il codice.");
+      hasJoined = false;
+      return;
+    }
+
+    // 2) Se esiste, procedo con l’ingresso
+    enterSession(sessionId, name);
+  });
+}
+
+function enterSession(sessionId, name) {
   currentSessionId = sessionId;
 
-  // Salvataggio studente nel DB
   const playersRef = db.ref(`sessions/${sessionId}/players`);
   const newPlayer = playersRef.push({
     name: name,
@@ -56,16 +69,16 @@ function joinSession() {
 
   studentId = newPlayer.key;
 
-  // Nascondi form solo dopo aver letto i valori
-  sessionIdInput.style.display = "none";
-  displayNameInput.style.display = "none";
+  // Nascondi form
+  document.getElementById("sessionId").style.display = "none";
+  document.getElementById("displayName").style.display = "none";
   document.getElementById("joinBtn").style.display = "none";
   document.getElementById("exitBtn").style.display = "block";
 
   document.getElementById("status").textContent =
     "In attesa che il docente avvii la partita.";
 
-  // Se il docente elimina la sessione
+  // Sessione eliminata dal docente
   db.ref(`sessions/${sessionId}`).on("value", snap => {
     if (!snap.exists()) {
       alert("La sessione è stata chiusa dal docente.");

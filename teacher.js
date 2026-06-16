@@ -155,6 +155,16 @@ function deleteSession() {
     });
 }
 
+function updateStartButton(players) {
+  const startBox = document.getElementById("startSessionBox");
+
+  if (currentSessionId && Object.keys(players).length > 0) {
+    startBox.style.display = "block";
+  } else {
+    startBox.style.display = "none";
+  }
+}
+
 // =====================================
 // Lobby
 // =====================================
@@ -170,6 +180,8 @@ function watchLobby() {
 
   db.ref(`sessions/${currentSessionId}/players`).on("value", snap => {
     const players = snap.val() || {};
+
+    updateStartButton(players);
 
     if (Object.keys(players).length === 0) {
       playersListEl.innerHTML = "Nessuno studente collegato";

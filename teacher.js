@@ -3,10 +3,9 @@
 // =========================
 
 let currentSessionId = null;
-let sessionCode = null;
 
 // =========================
-// Sessione (gestione login/logout + UI)
+// Gestione sessione/login
 // =========================
 
 auth.onAuthStateChanged(user => {
@@ -24,24 +23,21 @@ auth.onAuthStateChanged(user => {
       return;
     }
 
+    // Mostra UI docente
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("teacherPanel").style.display = "block";
 
+    // Mostra pannello admin
     showAdminPanel();
 
-    // Ricarica sessione salvata
-    db.ref("teachers/" + uid + "/currentSession").once("value").then(snap => {
-      const savedSession = snap.val();
-
-      if (savedSession) {
-        currentSessionId = savedSession;
-
-        loadLobby();
-      }
-    });
+    // RIPRISTINA SESSIONE DA LOCALSTORAGE
+    const saved = localStorage.getItem("currentSessionId");
+    if (saved) {
+      currentSessionId = saved;
+      loadLobby();
+    }
   });
 });
-
 
 // =========================
 // Login docente
@@ -66,7 +62,7 @@ function loginTeacher() {
 }
 
 // =========================
-// Creazione / selezione sessione
+// Creazione sessione
 // =========================
 
 function createSession() {
@@ -80,6 +76,10 @@ function createSession() {
   }
 
   currentSessionId = sessionId;
+
+  // SALVA SESSIONE IN LOCALSTORAGE
+  localStorage.setItem("currentSessionId", currentSessionId);
+
   const uid = auth.currentUser.uid;
 
   const ref = db.ref("sessions/" + currentSessionId);
@@ -87,9 +87,6 @@ function createSession() {
   ref.set({
     status: "waiting",
     teacherId: uid
-  })
-  .then(() => {
-    return db.ref("teachers/" + uid + "/currentSession").set(currentSessionId);
   })
   .then(() => {
     sessionStatusEl.textContent = "Sessione creata: " + currentSessionId;
@@ -182,18 +179,20 @@ function uploadExcel() {
 // =========================
 
 function loadLobby() {
-  if (currentSessionId) {
-    watchLobby();
-    watchScores();
-  }
+  if (!currentSessionId) return;
+  watchLobby();
+  watchScores();
 }
 
 function watchLobby() {
   const playersListEl = document.getElementById("playersList");
 
-  if (!currentSessionId) return;
+  if (!currentSessionId) {
+    playersListEl.innerHTML = "Nessuna sessione attiva";
+    return;
+  }
 
-  const playersRef = db.ref("sessions/" + currentSessionId + "/players");
+  const playersRef = db.ref(`sessions/${currentSessionId}/players`);
 
   playersRef.on("value", snap => {
     const players = snap.val() || {};
@@ -205,11 +204,11 @@ function watchLobby() {
     }
 
     let html = "<ul>";
-    entries.forEach(([uid, player]) => {
+    for (const [uid, player] of entries) {
       const name = player.displayName || uid;
       const status = player.status || "unknown";
       html += `<li>${name} – stato: ${status}</li>`;
-    });
+    }
     html += "</ul>";
 
     playersListEl.innerHTML = html;
@@ -334,5 +333,6 @@ function rejectTeacher(uid) {
 // =========================
 
 document.getElementById("logoutBtn").addEventListener("click", () => {
+  localStorage.removeItem("currentSessionId");
   auth.signOut();
 });

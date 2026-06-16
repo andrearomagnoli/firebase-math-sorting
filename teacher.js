@@ -18,6 +18,14 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("logoutBtn")?.addEventListener("click", () => auth.signOut());
 });
 
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("loginBtn")?.addEventListener("touchstart", loginTeacher);
+  document.getElementById("createSessionBtn")?.addEventListener("touchstart", createSession);
+  document.getElementById("deleteSessionBtn")?.addEventListener("touchstart", deleteSession);
+  document.getElementById("startSessionBtn")?.addEventListener("touchstart", startSession);
+  document.getElementById("logoutBtn")?.addEventListener("touchstart", () => auth.signOut());
+});
+
 // =====================================
 // Login / Logout
 // =====================================

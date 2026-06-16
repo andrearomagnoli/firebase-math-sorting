@@ -29,15 +29,19 @@ auth.onAuthStateChanged(user => {
 
     showAdminPanel();
 
+    // Ricarica sessione salvata
     db.ref("teachers/" + uid + "/currentSession").once("value").then(snap => {
       const savedSession = snap.val();
+
       if (savedSession) {
         currentSessionId = savedSession;
+
         loadLobby();
       }
     });
   });
 });
+
 
 // =========================
 // Login docente

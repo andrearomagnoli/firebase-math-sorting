@@ -6,6 +6,12 @@ let studentId = null;
 let hasJoined = false;
 let gameInstance = null;
 
+// Variabili di gioco
+let timeLeft = 10;
+let score = 0;
+let timerText = null;
+let scoreText = null;
+
 document.addEventListener("DOMContentLoaded", () => {
   const joinBtn = document.getElementById("joinBtn");
   const exitBtn = document.getElementById("exitBtn");
@@ -151,9 +157,32 @@ function preload() {
 }
 
 function create() {
-  this.add.text(50, 50, "Gioco avviato!", {
+  timerText = this.add.text(20, 20, "Tempo: 10", {
     font: "24px Arial",
     fill: "#000"
+  });
+
+  scoreText = this.add.text(20, 60, "Punteggio: 0", {
+    font: "24px Arial",
+    fill: "#000"
+  });
+
+  // Timer che scala ogni secondo
+  this.time.addEvent({
+    delay: 1000,
+    callback: () => {
+      timeLeft--;
+      timerText.setText("Tempo: " + timeLeft);
+
+      // Punteggio fittizio che cresce
+      score += Phaser.Math.Between(1, 5);
+      scoreText.setText("Punteggio: " + score);
+
+      if (timeLeft <= 0) {
+        endGame();
+      }
+    },
+    loop: true
   });
 }
 

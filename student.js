@@ -97,8 +97,11 @@ function enterSession(sessionId, name) {
   // (questo è l’unico caso in cui lo studente deve essere espulso)
   db.ref(`sessions/${sessionId}`).on("value", snap => {
     if (!snap.exists()) {
-      alert("La sessione è stata chiusa dal docente.");
-      resetStudentUI();   // NON cancellare il punteggio
+      // Se la partita è finita, NON notificare nulla
+      if (!gameEnded) {
+        alert("La sessione è stata chiusa dal docente.");
+      }
+      resetStudentUI();
       return;
     }
 

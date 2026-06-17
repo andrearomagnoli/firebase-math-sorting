@@ -210,23 +210,32 @@ function startGame(questions, sessionId, studentId) {
 
     const scene = this;
 
-    falling = scene.add.text(200, 50, q.text, {
+    // 1) CREA UN CONTENITORE
+    falling = scene.add.container(200, 50);
+
+    // 2) AGGIUNGI IL TESTO DENTRO IL CONTENITORE
+    const label = scene.add.text(0, 0, q.text, {
       fontSize: "20px",
       color: "#000",
       align: "center",
       wordWrap: { width: 360 }
     });
-    falling.setOrigin(0.5);
+    label.setOrigin(0.5);
 
+    falling.add(label);
+
+    // 3) AGGIUNGI LA FISICA AL CONTENITORE (Safari-friendly)
     scene.physics.add.existing(falling);
 
-    falling.body.setSize(falling.width, falling.height);
-    falling.body.setOffset(0, 0);
+    // 4) HITBOX CORRETTA
+    falling.body.setSize(label.width, label.height);
+    falling.body.setOffset(-label.width/2, -label.height/2);
 
     falling.body.setVelocityY(0);
     falling.body.setBounce(0);
     falling.body.setCollideWorldBounds(false);
 
+    // 5) COLLISIONI
     baskets.forEach(b => {
       scene.physics.add.overlap(falling, b, () => {
         if (!falling.active) return;

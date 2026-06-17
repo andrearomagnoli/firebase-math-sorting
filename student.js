@@ -140,12 +140,19 @@ function startGame(questions, sessionId, studentId) {
     backgroundColor: "#ffffff",
     physics: {
       default: "arcade",
-      arcade: { gravity: { y: 200 }, debug: false }
+      arcade: { gravity: { y: 180 }, debug: false }
+    },
+    input: {
+      activePointers: 3,
+      touch: true
     },
     scene: { preload, create, update }
   };
 
-  gameInstance = new Phaser.Game(config);
+  // Ritardo necessario su mobile per evitare canvas 0×0
+  setTimeout(() => {
+    gameInstance = new Phaser.Game(config);
+  }, 150);
 
   let falling = null;
   let baskets = [];
@@ -154,9 +161,7 @@ function startGame(questions, sessionId, studentId) {
   // -------------------------
   // PRELOAD
   // -------------------------
-  function preload() {
-    // Nessuna risorsa esterna
-  }
+  function preload() {}
 
   // -------------------------
   // CREATE
@@ -217,7 +222,10 @@ function startGame(questions, sessionId, studentId) {
     // 2) AGGIUNGI LA FISICA
     scene.physics.add.existing(falling);
 
-    // 3) CONFIGURA IL CORPO
+    // 3) HITBOX CORRETTA (fondamentale su mobile)
+    falling.body.setSize(falling.width, falling.height);
+    falling.body.setOffset(0, 0);
+
     falling.body.setVelocityY(0);
     falling.body.setBounce(0);
     falling.body.setCollideWorldBounds(false);

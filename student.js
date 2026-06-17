@@ -1,27 +1,21 @@
 // student.js
-// NON dichiarare db o auth qui. Devono arrivare da firebase-config.js.
+// NON dichiarare db o auth qui. Arrivano da firebase-config.js.
 
-// -------------------------
-// CONTROLLI INIZIALI
-// -------------------------
-function firebaseReady() {
-  if (typeof firebase === "undefined") return false;
-  if (!firebase.apps.length) return false;
-  if (typeof db === "undefined") return false;
-  return true;
+// Aspetta Firebase prima di partire
+function waitForFirebase(callback) {
+  const check = setInterval(() => {
+    if (typeof firebase !== "undefined" &&
+        firebase.apps.length > 0 &&
+        typeof db !== "undefined") {
+      clearInterval(check);
+      callback();
+    }
+  }, 50);
 }
 
-// Aspetta che Firebase sia pronto prima di tutto
-document.addEventListener("DOMContentLoaded", () => {
-  const check = setInterval(() => {
-    if (firebaseReady()) {
-      console.log("Firebase OK – student.js avviato");
-      clearInterval(check);
-      initStudent();
-    } else {
-      console.warn("Firebase non ancora pronto...");
-    }
-  }, 100);
+waitForFirebase(() => {
+  console.log("Firebase pronto – student.js avviato");
+  initStudent();
 });
 
 // -------------------------
@@ -29,48 +23,33 @@ document.addEventListener("DOMContentLoaded", () => {
 // -------------------------
 let currentSessionId = null;
 let studentId = null;
-let hasJoined = false;
 let gameInstance = null;
 
 // -------------------------
 // INIZIALIZZAZIONE UI
 // -------------------------
 function initStudent() {
-  const joinBtn = document.getElementById("joinBtn");
-  const exitBtn = document.getElementById("exitBtn");
-
-  joinBtn.addEventListener("click", joinSession);
-  exitBtn.addEventListener("click", leaveSession);
+  document.getElementById("joinBtn").addEventListener("click", joinSession);
+  document.getElementById("exitBtn").addEventListener("click", leaveSession);
 }
 
 // -------------------------
 // JOIN SESSIONE
 // -------------------------
 function joinSession() {
-  if (!firebaseReady()) {
-    alert("Firebase non inizializzato. Controlla firebase-config.js");
-    return;
-  }
-
-  if (hasJoined) return;
-  hasJoined = true;
-
   const sessionId = document.getElementById("sessionId").value.trim();
   const name = document.getElementById("displayName").value.trim();
 
   if (!sessionId || !name) {
     alert("Inserisci codice sessione e cognome.");
-    hasJoined = false;
     return;
   }
 
   db.ref(`sessions/${sessionId}`).once("value").then(snap => {
     if (!snap.exists()) {
       alert("La sessione non esiste.");
-      hasJoined = false;
       return;
     }
-
     enterSession(sessionId, name);
   });
 }
@@ -114,8 +93,7 @@ function enterSession(sessionId, name) {
 function loadQuestions(sessionId, callback) {
   db.ref(`sessions/${sessionId}/questions`).once("value").then(snap => {
     if (!snap.exists()) return callback([]);
-    const data = snap.val();
-    callback(Object.values(data));
+    callback(Object.values(snap.val()));
   });
 }
 
@@ -138,7 +116,6 @@ function leaveSession() {
 
   currentSessionId = null;
   studentId = null;
-  hasJoined = false;
 }
 
 // -------------------------
@@ -200,21 +177,22 @@ function startGame(questions, sessionId, studentId) {
     const q = questions[index];
     target = q.basket;
 
-    falling = this.physics.add.text(200, 50, q.text, {
+    const scene = gameInstance.scene.keys[Object.keys(gameInstance.scene.keys)[0]];
+    falling = scene.physics.add.text(200, 50, q.text, {
       fontSize: "20px",
       color: "#000"
     });
     falling.setOrigin(0.5);
 
     baskets.forEach(b => {
-      this.physics.add.overlap(falling, b, () => {
+      scene.physics.add.overlap(falling, b, () => {
         if (!falling.active) return;
 
         if (b.basketName === target) score++;
 
         falling.destroy();
         index++;
-        spawn.call(this);
+        spawn.call(scene);
       });
     });
   }

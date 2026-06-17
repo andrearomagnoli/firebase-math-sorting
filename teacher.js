@@ -165,6 +165,7 @@ function loadSessionStatus() {
       // Aggiorna lista studenti e punteggi
       updatePlayersList(sessionId);
       updateScores(sessionId);
+      updateQuestionsInfo(sessionId);
     }
   );
 }
@@ -274,6 +275,7 @@ function handleExcelUpload() {
     });
 
     excelStatus.textContent = "File caricato correttamente.";
+    updateQuestionsInfo(sessionId);
 
     deleteExcelBtn.style.display = "block";
     updateStartButtonVisibility(sessionId);
@@ -290,6 +292,7 @@ if (deleteExcelBtn) {
 
     db.ref(`sessions/${sessionId}/questions`).remove();
     excelStatus.textContent = "File eliminato.";
+    updateQuestionsInfo(sessionId);
 
     deleteExcelBtn.style.display = "none";
     updateStartButtonVisibility(sessionId);
@@ -306,5 +309,38 @@ function updateStartButtonVisibility(sessionId) {
     } else {
       startBox.style.display = "none";
     }
+  });
+}
+
+
+// -----------------------------
+// INFO SINTETICHE QUESITI
+// -----------------------------
+
+function updateQuestionsInfo(sessionId) {
+  const box = document.getElementById("questionsInfo");
+  const countSpan = document.getElementById("qCount");
+  const basketsSpan = document.getElementById("qBaskets");
+
+  db.ref(`sessions/${sessionId}/questions`).once("value", snap => {
+    if (!snap.exists()) {
+      box.style.display = "none";
+      return;
+    }
+
+    const data = snap.val();
+    const keys = Object.keys(data);
+
+    // Numero quesiti
+    const count = keys.length;
+
+    // Ceste uniche
+    const baskets = [...new Set(keys.map(k => data[k].basket))];
+
+    // Aggiorna UI
+    countSpan.textContent = count;
+    basketsSpan.textContent = baskets.join(", ");
+
+    box.style.display = "block";
   });
 }

@@ -85,59 +85,67 @@ function joinSession() {
 
 
 // ---------------------------------------------------------
-// 2) ENTRA NELLA SESSIONE
+// 2) ENTRA NELLA SESSIONE E CARICA LE DOMANDE
 // ---------------------------------------------------------
-function enterSession(sessionId, name) {
-  currentSessionId = sessionId;
+function enterSession() {
+  const sessionId = document.getElementById("sessionId").value.trim();
+  const displayName = document.getElementById("displayName").value.trim();
+  const statusEl = document.getElementById("status");
 
-  const playersRef = db.ref(`sessions/${sessionId}/players`);
-  const newPlayer = playersRef.push({
-    name: name,
+  if (!sessionId || !displayName) {
+    statusEl.textContent = "Inserisci cognome e codice partita.";
+    return;
+  }
+
+  currentSessionId = sessionId;
+  currentDisplayName = displayName;
+
+  // Genera ID casuale per lo studente
+  currentUserId = "guest_" + Math.random().toString(36).substring(2, 10);
+
+  // Registra lo studente nella sessione
+  db.ref(`sessions/${currentSessionId}/players/${currentUserId}`).set({
+    name: currentDisplayName,
     score: 0
   });
 
-  studentId = newPlayer.key;
-
-  document.getElementById("sessionId").style.display = "none";
-  document.getElementById("displayName").style.display = "none";
-  document.getElementById("joinBtn").style.display = "none";
+  // Mostra pulsante Esci
   document.getElementById("exitBtn").style.display = "block";
 
-  document.getElementById("status").textContent =
-    "In attesa che il docente avvii la partita.";
+  // Nasconde form
+  document.getElementById("joinBtn").style.display = "none";
 
-  // Listener: docente elimina la sessione
-  addFirebaseListener(
-    db.ref(`sessions/${sessionId}`),
-    "value",
-    snap => {
-      if (!snap.exists()) {
+  // Ascolta lo stato della sessione
+  db.ref(`sessions/${currentSessionId}/status`).on("value", snap => {
+    const status = snap.val();
+    statusEl.textContent = "Stato sessione: " + status;
 
-        // Se la partita è finita, NON notificare nulla
-        if (gameEnded) {
-          removeAllFirebaseListeners();
-          resetStudentUI();
-          return;
-        }
-
-        // Se la partita NON è finita, notifica normalmente
-        alert("La sessione è stata chiusa dal docente.");
-        removeAllFirebaseListeners();
-        resetStudentUI();
-      }
+    if (status === "started") {
+      // Carica quesiti e avvia il gioco
+      loadQuestions(currentSessionId, questions => {
+        document.getElementById("gameContainer").style.display = "block";
+        startGame(questions, currentSessionId, currentUserId);
+      });
     }
-  );
 
-  // Listener: docente avvia la partita
-  addFirebaseListener(
-    db.ref(`sessions/${sessionId}/status`),
-    "value",
-    snap => {
-      if (snap.val() === "started") {
-        startGame();
-      }
+    if (status === null) {
+      // Sessione eliminata dal docente
+      statusEl.textContent = "Sessione terminata dal docente.";
+      setTimeout(() => location.reload(), 1500);
     }
-  );
+  });
+}
+
+function loadQuestions(sessionId, callback) {
+  db.ref(`sessions/${sessionId}/questions`).once("value", snap => {
+    if (!snap.exists()) {
+      callback([]);
+      return;
+    }
+    const data = snap.val();
+    const arr = Object.keys(data).map(k => data[k]);
+    callback(arr);
+  });
 }
 
 
@@ -188,14 +196,11 @@ function resetStudentUI() {
 // ---------------------------------------------------------
 // 5) AVVIO GIOCO
 // ---------------------------------------------------------
-function startGame() {
-  const container = document.getElementById("gameContainer");
-  container.style.display = "block";
+function startGame(questions, sessionId, playerId) {
 
-  if (gameInstance) {
-    gameInstance.destroy(true);
-    gameInstance = null;
-  }
+  let currentIndex = 0;
+  let score = 0;
+  const total = questions.length;
 
   const config = {
     type: Phaser.AUTO,
@@ -203,6 +208,10 @@ function startGame() {
     height: 600,
     parent: "gameContainer",
     backgroundColor: "#ffffff",
+    physics: {
+      default: "arcade",
+      arcade: { gravity: { y: 200 }, debug: false }
+    },
     scene: {
       preload: preload,
       create: create,
@@ -210,7 +219,96 @@ function startGame() {
     }
   };
 
-  gameInstance = new Phaser.Game(config);
+  const game = new Phaser.Game(config);
+
+  let fallingText;
+  let baskets = [];
+  let targetBasket;
+
+  function preload() {}
+
+  function create() {
+
+    // CESTE IN BASSO
+    const uniqueBaskets = [...new Set(questions.map(q => q.basket))];
+    const basketWidth = 400 / uniqueBaskets.length;
+
+    uniqueBaskets.forEach((b, i) => {
+      const rect = this.add.rectangle(
+        basketWidth * i + basketWidth / 2,
+        580,
+        basketWidth - 10,
+        40,
+        0xdddddd
+      );
+      this.physics.add.existing(rect, true);
+      rect.basketName = b;
+      baskets.push(rect);
+
+      this.add.text(rect.x - 40, 560, b, { fontSize: "14px", color: "#000" });
+    });
+
+    // PRIMO QUESITO
+    spawnQuestion.call(this);
+
+    // TOUCH CONTROLS
+    this.input.on("pointerdown", pointer => {
+      if (!fallingText) return;
+
+      if (pointer.x < 200) {
+        fallingText.setVelocityX(-150);
+      } else {
+        fallingText.setVelocityX(150);
+      }
+    });
+  }
+
+  function spawnQuestion() {
+    if (currentIndex >= total) {
+      endGame();
+      return;
+    }
+
+    const q = questions[currentIndex];
+    targetBasket = q.basket;
+
+    fallingText = this.physics.add.text(200, 50, q.text, {
+      fontSize: "20px",
+      color: "#000"
+    });
+    fallingText.setOrigin(0.5);
+
+    // Collisione con ceste
+    baskets.forEach(b => {
+      this.physics.add.overlap(fallingText, b, () => {
+        if (!fallingText.active) return;
+
+        if (b.basketName === targetBasket) {
+          score++;
+        }
+
+        fallingText.destroy();
+        currentIndex++;
+        spawnQuestion.call(this);
+      });
+    });
+  }
+
+  function update() {
+    if (fallingText && fallingText.y > 620) {
+      fallingText.destroy();
+      currentIndex++;
+      spawnQuestion.call(this);
+    }
+  }
+
+  function endGame() {
+    const finalScore = Math.max(2, Math.floor(2 + 8 * (score / total)));
+
+    db.ref(`sessions/${sessionId}/players/${playerId}/score`).set(finalScore);
+
+    alert("Partita terminata. Punteggio: " + finalScore);
+  }
 }
 
 

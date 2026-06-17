@@ -122,8 +122,10 @@ function leaveSession() {
 // GIOCO PHASER
 // -------------------------
 function startGame(questions, sessionId, studentId) {
+
+  // Se esiste già un'istanza Phaser, distruggila
   if (gameInstance) {
-    gameInstance.destroy(true);
+    try { gameInstance.destroy(true); } catch(e){}
     gameInstance = null;
   }
 
@@ -149,41 +151,78 @@ function startGame(questions, sessionId, studentId) {
   let baskets = [];
   let target = null;
 
-  function preload() {}
+  // -------------------------
+  // PRELOAD
+  // -------------------------
+  function preload() {
+    // Nessuna risorsa esterna
+  }
 
+  // -------------------------
+  // CREATE
+  // -------------------------
   function create() {
+
+    // Crea le ceste
     const unique = [...new Set(questions.map(q => q.basket))];
     const w = 400 / unique.length;
 
     unique.forEach((b, i) => {
-      const rect = this.add.rectangle(w * i + w / 2, 580, w - 10, 40, 0xdddddd);
+      const rect = this.add.rectangle(
+        w * i + w / 2,
+        580,
+        w - 10,
+        40,
+        0xdddddd
+      );
       this.physics.add.existing(rect, true);
       rect.basketName = b;
       baskets.push(rect);
-      this.add.text(rect.x - 40, 560, b, { fontSize: "14px", color: "#000" });
+
+      this.add.text(rect.x - 40, 560, b, {
+        fontSize: "14px",
+        color: "#000"
+      });
     });
 
     spawn.call(this);
 
+    // Movimento laterale con tap/click
     this.input.on("pointerdown", p => {
-      if (!falling) return;
-      falling.setVelocityX(p.x < 200 ? -150 : 150);
+      if (!falling || !falling.body) return;
+      falling.body.setVelocityX(p.x < 200 ? -150 : 150);
     });
   }
 
+  // -------------------------
+  // SPAWN QUESITO
+  // -------------------------
   function spawn() {
     if (index >= questions.length) return endGame();
 
     const q = questions[index];
     target = q.basket;
 
-    const scene = gameInstance.scene.keys[Object.keys(gameInstance.scene.keys)[0]];
-    falling = scene.physics.add.text(200, 50, q.text, {
+    const scene = this;
+
+    // 1) CREA IL TESTO
+    falling = scene.add.text(200, 50, q.text, {
       fontSize: "20px",
-      color: "#000"
+      color: "#000",
+      align: "center",
+      wordWrap: { width: 360 }
     });
     falling.setOrigin(0.5);
 
+    // 2) AGGIUNGI LA FISICA
+    scene.physics.add.existing(falling);
+
+    // 3) CONFIGURA IL CORPO
+    falling.body.setVelocityY(0);
+    falling.body.setBounce(0);
+    falling.body.setCollideWorldBounds(false);
+
+    // 4) COLLISIONE CON LE CESTE
     baskets.forEach(b => {
       scene.physics.add.overlap(falling, b, () => {
         if (!falling.active) return;
@@ -197,6 +236,9 @@ function startGame(questions, sessionId, studentId) {
     });
   }
 
+  // -------------------------
+  // UPDATE
+  // -------------------------
   function update() {
     if (falling && falling.y > 620) {
       falling.destroy();
@@ -205,9 +247,18 @@ function startGame(questions, sessionId, studentId) {
     }
   }
 
+  // -------------------------
+  // FINE PARTITA
+  // -------------------------
   function endGame() {
     const finalScore = Math.max(2, Math.floor(2 + 8 * (score / questions.length)));
+
     db.ref(`sessions/${sessionId}/players/${studentId}/score`).set(finalScore);
+
     alert("Partita terminata. Punteggio: " + finalScore);
+
+    try { gameInstance.destroy(true); } catch(e){}
+    gameInstance = null;
+    document.getElementById("gameContainer").style.display = "none";
   }
 }

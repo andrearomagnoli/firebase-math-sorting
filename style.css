@@ -22,6 +22,11 @@ button, .btn {
   pointer-events: none;
 }
 
+#gameContainer canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .card, .container, section {
   pointer-events: auto;
 }

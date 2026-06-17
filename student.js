@@ -198,6 +198,11 @@ function resetStudentUI() {
 // ---------------------------------------------------------
 function startGame(questions, sessionId, playerId) {
 
+  if (gameInstance) {
+    gameInstance.destroy(true);
+    gameInstance = null;
+  }
+
   let currentIndex = 0;
   let score = 0;
   const total = questions.length;
@@ -212,14 +217,10 @@ function startGame(questions, sessionId, playerId) {
       default: "arcade",
       arcade: { gravity: { y: 200 }, debug: false }
     },
-    scene: {
-      preload: preload,
-      create: create,
-      update: update
-    }
+    scene: { preload, create, update }
   };
 
-  const game = new Phaser.Game(config);
+  gameInstance = new Phaser.Game(config);
 
   let fallingText;
   let baskets = [];
@@ -229,7 +230,7 @@ function startGame(questions, sessionId, playerId) {
 
   function create() {
 
-    // CESTE IN BASSO
+    // Ceste
     const uniqueBaskets = [...new Set(questions.map(q => q.basket))];
     const basketWidth = 400 / uniqueBaskets.length;
 
@@ -248,18 +249,11 @@ function startGame(questions, sessionId, playerId) {
       this.add.text(rect.x - 40, 560, b, { fontSize: "14px", color: "#000" });
     });
 
-    // PRIMO QUESITO
     spawnQuestion.call(this);
 
-    // TOUCH CONTROLS
     this.input.on("pointerdown", pointer => {
       if (!fallingText) return;
-
-      if (pointer.x < 200) {
-        fallingText.setVelocityX(-150);
-      } else {
-        fallingText.setVelocityX(150);
-      }
+      fallingText.setVelocityX(pointer.x < 200 ? -150 : 150);
     });
   }
 
@@ -278,14 +272,11 @@ function startGame(questions, sessionId, playerId) {
     });
     fallingText.setOrigin(0.5);
 
-    // Collisione con ceste
     baskets.forEach(b => {
       this.physics.add.overlap(fallingText, b, () => {
         if (!fallingText.active) return;
 
-        if (b.basketName === targetBasket) {
-          score++;
-        }
+        if (b.basketName === targetBasket) score++;
 
         fallingText.destroy();
         currentIndex++;

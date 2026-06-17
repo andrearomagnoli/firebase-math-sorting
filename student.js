@@ -98,38 +98,42 @@ function enterSession() {
   }
 
   currentSessionId = sessionId;
-  currentDisplayName = displayName;
-
-  // Genera ID casuale per lo studente
   currentUserId = "guest_" + Math.random().toString(36).substring(2, 10);
 
-  // Registra lo studente nella sessione
-  db.ref(`sessions/${currentSessionId}/players/${currentUserId}`).set({
-    name: currentDisplayName,
+  // Registra lo studente
+  db.ref(`sessions/${sessionId}/players/${currentUserId}`).set({
+    name: displayName,
     score: 0
   });
 
-  // Mostra pulsante Esci
   document.getElementById("exitBtn").style.display = "block";
-
-  // Nasconde form
   document.getElementById("joinBtn").style.display = "none";
 
-  // Ascolta lo stato della sessione
-  db.ref(`sessions/${currentSessionId}/status`).on("value", snap => {
+  // Listener sullo stato della sessione
+  db.ref(`sessions/${sessionId}/status`).on("value", snap => {
     const status = snap.val();
     statusEl.textContent = "Stato sessione: " + status;
 
     if (status === "started") {
-      // Carica quesiti e avvia il gioco
-      loadQuestions(currentSessionId, questions => {
-        document.getElementById("gameContainer").style.display = "block";
-        startGame(questions, currentSessionId, currentUserId);
+      loadQuestions(sessionId, questions => {
+
+        if (questions.length === 0) {
+          alert("Nessun quesito caricato dal docente.");
+          return;
+        }
+
+        // MOSTRA IL CANVAS PRIMA DI CREARE PHASER
+        const container = document.getElementById("gameContainer");
+        container.style.display = "block";
+
+        // PICCOLA PAUSA PER MOBILE
+        setTimeout(() => {
+          startGame(questions, sessionId, currentUserId);
+        }, 50);
       });
     }
 
     if (status === null) {
-      // Sessione eliminata dal docente
       statusEl.textContent = "Sessione terminata dal docente.";
       setTimeout(() => location.reload(), 1500);
     }

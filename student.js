@@ -13,9 +13,11 @@ function waitForFirebase(callback) {
   }, 50);
 }
 
-waitForFirebase(() => {
-  console.log("Firebase pronto – student.js avviato");
-  initStudent();
+document.addEventListener("DOMContentLoaded", () => {
+  waitForFirebase(() => {
+    console.log("Firebase pronto – student.js avviato");
+    initStudent();
+  });
 });
 
 // -------------------------
@@ -77,11 +79,16 @@ function enterSession(sessionId, name) {
           return;
         }
 
-        document.getElementById("gameContainer").style.display = "block";
+        const container = document.getElementById("gameContainer");
+        container.style.display = "block";
 
-        setTimeout(() => {
-          startGame(questions, sessionId, studentId);
-        }, 50);
+        // MOBILE SAFE: aspetta due frame prima di creare Phaser
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            console.log("Container size:", container.clientWidth, container.clientHeight);
+            startGame(questions, sessionId, studentId);
+          });
+        });
       });
     }
   });
@@ -106,7 +113,7 @@ function leaveSession() {
   }
 
   if (gameInstance) {
-    gameInstance.destroy(true);
+    try { gameInstance.destroy(true); } catch(e){}
     gameInstance = null;
   }
 
@@ -119,11 +126,10 @@ function leaveSession() {
 }
 
 // -------------------------
-// GIOCO PHASER
+// GIOCO PHASER (VERSIONE DEFINITIVA)
 // -------------------------
 function startGame(questions, sessionId, studentId) {
 
-  // Se esiste già un'istanza Phaser, distruggila
   if (gameInstance) {
     try { gameInstance.destroy(true); } catch(e){}
     gameInstance = null;
@@ -138,37 +144,35 @@ function startGame(questions, sessionId, studentId) {
     height: 600,
     parent: "gameContainer",
     backgroundColor: "#ffffff",
+
     physics: {
       default: "arcade",
       arcade: { gravity: { y: 180 }, debug: false }
     },
+
     input: {
       activePointers: 3,
       touch: true
     },
+
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+
     scene: { preload, create, update }
   };
 
-  // Ritardo necessario su mobile per evitare canvas 0×0
-  setTimeout(() => {
-    gameInstance = new Phaser.Game(config);
-  }, 150);
+  gameInstance = new Phaser.Game(config);
 
   let falling = null;
   let baskets = [];
   let target = null;
 
-  // -------------------------
-  // PRELOAD
-  // -------------------------
   function preload() {}
 
-  // -------------------------
-  // CREATE
-  // -------------------------
   function create() {
 
-    // Crea le ceste
     const unique = [...new Set(questions.map(q => q.basket))];
     const w = 400 / unique.length;
 
@@ -192,16 +196,12 @@ function startGame(questions, sessionId, studentId) {
 
     spawn.call(this);
 
-    // Movimento laterale con tap/click
     this.input.on("pointerdown", p => {
       if (!falling || !falling.body) return;
       falling.body.setVelocityX(p.x < 200 ? -150 : 150);
     });
   }
 
-  // -------------------------
-  // SPAWN QUESITO
-  // -------------------------
   function spawn() {
     if (index >= questions.length) return endGame();
 
@@ -210,7 +210,6 @@ function startGame(questions, sessionId, studentId) {
 
     const scene = this;
 
-    // 1) CREA IL TESTO
     falling = scene.add.text(200, 50, q.text, {
       fontSize: "20px",
       color: "#000",
@@ -219,10 +218,8 @@ function startGame(questions, sessionId, studentId) {
     });
     falling.setOrigin(0.5);
 
-    // 2) AGGIUNGI LA FISICA
     scene.physics.add.existing(falling);
 
-    // 3) HITBOX CORRETTA (fondamentale su mobile)
     falling.body.setSize(falling.width, falling.height);
     falling.body.setOffset(0, 0);
 
@@ -230,7 +227,6 @@ function startGame(questions, sessionId, studentId) {
     falling.body.setBounce(0);
     falling.body.setCollideWorldBounds(false);
 
-    // 4) COLLISIONE CON LE CESTE
     baskets.forEach(b => {
       scene.physics.add.overlap(falling, b, () => {
         if (!falling.active) return;
@@ -244,9 +240,6 @@ function startGame(questions, sessionId, studentId) {
     });
   }
 
-  // -------------------------
-  // UPDATE
-  // -------------------------
   function update() {
     if (falling && falling.y > 620) {
       falling.destroy();
@@ -255,9 +248,6 @@ function startGame(questions, sessionId, studentId) {
     }
   }
 
-  // -------------------------
-  // FINE PARTITA
-  // -------------------------
   function endGame() {
     const finalScore = Math.max(2, Math.floor(2 + 8 * (score / questions.length)));
 

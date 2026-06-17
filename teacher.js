@@ -1,6 +1,15 @@
-// Firebase è già inizializzato in firebase-config.js
-const auth = firebase.auth();
-const db = firebase.database();
+// teacher.js (inizio)
+
+// Firebase è inizializzato in firebase-config.js
+// Usa le istanze già create lì, evita di ridefinirle qui.
+
+const auth = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth() : null;
+const db = (typeof window !== 'undefined' && typeof window.db !== 'undefined') ? window.db : (typeof firebase !== 'undefined' ? firebase.database() : null);
+
+if (!db) {
+  console.error("Firebase DB non inizializzato. Controlla firebase-config.js e l'ordine degli script.");
+  document.getElementById && (document.getElementById("status") && (document.getElementById("status").textContent = "Errore Firebase: controlla la configurazione."));
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const loginBtn = document.getElementById("loginBtn");

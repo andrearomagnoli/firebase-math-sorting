@@ -2,17 +2,21 @@
 
 // ---------- Variabili globali ----------
 let currentSessionId = null;
-let currentUserId = null;
+let studentId = null;
+let hasJoined = false;
 let gameInstance = null;
+let gameEnded = false;
 
-// Elementi UI
+// UI
 const joinBtn = document.getElementById("joinBtn");
 const exitBtn = document.getElementById("exitBtn");
 const statusEl = document.getElementById("status");
 const debugEl = document.getElementById("debug");
 const gameContainer = document.getElementById("gameContainer");
 
-// Debug helper
+// Lista listener firebase per pulizia
+let firebaseListeners = [];
+
 function debug(msg) {
   console.log(msg);
   if (debugEl) {
@@ -21,72 +25,128 @@ function debug(msg) {
   }
 }
 
-// ---------- Funzione per caricare i quesiti ----------
-function loadQuestions(sessionId, callback) {
-  db.ref(`sessions/${sessionId}/questions`).once("value", snap => {
-    if (!snap.exists()) {
-      callback([]);
-      return;
+// Controllo che Firebase sia pronto
+function ensureFirebaseReady() {
+  if (typeof firebase === 'undefined' || typeof firebase.database === 'undefined') {
+    statusEl.textContent = "Firebase non inizializzato. Controlla firebase-config.js.";
+    debug("Firebase non inizializzato.");
+    return false;
+  }
+  if (typeof db === 'undefined') {
+    // Se firebase-config.js non ha definito db, crealo qui
+    try {
+      db = firebase.database();
+    } catch (e) {
+      statusEl.textContent = "Errore inizializzazione DB Firebase.";
+      debug("Errore inizializzazione DB Firebase: " + e);
+      return false;
     }
+  }
+  return true;
+}
+
+// Aggiunge listener e lo traccia per rimozione
+function addFirebaseListener(ref, event, cb) {
+  ref.on(event, cb);
+  firebaseListeners.push({ ref, event, cb });
+}
+
+function removeAllFirebaseListeners() {
+  firebaseListeners.forEach(l => {
+    try { l.ref.off(l.event, l.cb); } catch(e){/*ignore*/ }
+  });
+  firebaseListeners = [];
+}
+
+// ---------- Carica quesiti ----------
+function loadQuestions(sessionId, callback) {
+  if (!ensureFirebaseReady()) { callback([]); return; }
+  db.ref(`sessions/${sessionId}/questions`).once("value").then(snap => {
+    if (!snap.exists()) { callback([]); return; }
     const data = snap.val();
     const arr = Object.keys(data).map(k => data[k]);
-    // Ordina per id per stabilità (opzionale)
-    arr.sort((a, b) => (a.id > b.id ? 1 : -1));
+    arr.sort((a,b) => (a.id > b.id) ? 1 : -1);
     callback(arr);
-  }, err => {
+  }).catch(err => {
     console.error("Errore lettura questions:", err);
     callback([]);
   });
 }
 
-// ---------- enterSession ----------
-function enterSession() {
-  const sessionId = document.getElementById("sessionId").value.trim();
-  const displayName = document.getElementById("displayName").value.trim();
+// ---------- Join / Enter session ----------
+function joinSession() {
+  if (!ensureFirebaseReady()) return;
+  if (hasJoined) return;
+  hasJoined = true;
 
-  if (!sessionId || !displayName) {
-    statusEl.textContent = "Inserisci cognome e codice partita.";
+  const sessionIdInput = document.getElementById("sessionId");
+  const displayNameInput = document.getElementById("displayName");
+
+  const sessionId = sessionIdInput.value.trim();
+  const name = displayNameInput.value.trim();
+
+  if (!sessionId || !name) {
+    alert("Inserisci codice sessione e cognome.");
+    hasJoined = false;
     return;
   }
 
-  currentSessionId = sessionId;
-  currentUserId = "guest_" + Math.random().toString(36).substring(2, 10);
+  db.ref(`sessions/${sessionId}`).once("value").then(snap => {
+    if (!snap.exists()) {
+      alert("La sessione non esiste. Controlla il codice.");
+      hasJoined = false;
+      return;
+    }
+    const data = snap.val();
+    if (data.status === "finished") {
+      alert("La sessione è terminata. Non puoi più entrare.");
+      hasJoined = false;
+      return;
+    }
+    enterSession(sessionId, name);
+  }).catch(err => {
+    console.error("Errore controllo sessione:", err);
+    alert("Errore di rete. Riprova.");
+    hasJoined = false;
+  });
+}
 
-  // Registra lo studente nella sessione
-  db.ref(`sessions/${currentSessionId}/players/${currentUserId}`).set({
+function enterSession(sessionId, displayName) {
+  if (!ensureFirebaseReady()) return;
+
+  currentSessionId = sessionId;
+  studentId = "guest_" + Math.random().toString(36).substring(2, 10);
+
+  // Registra lo studente
+  db.ref(`sessions/${sessionId}/players/${studentId}`).set({
     name: displayName,
     score: 0
   }).then(() => {
     statusEl.textContent = "Registrato. In attesa dell'avvio della partita...";
-    debug("Registrazione completata: " + currentUserId);
+    debug("Registrazione completata: " + studentId);
   }).catch(err => {
     console.error("Errore registrazione player:", err);
     statusEl.textContent = "Errore registrazione.";
   });
 
-  exitBtn.style.display = "block";
-  joinBtn.style.display = "none";
+  document.getElementById("exitBtn").style.display = "block";
+  document.getElementById("joinBtn").style.display = "none";
 
   // Listener sullo stato della sessione
-  db.ref(`sessions/${currentSessionId}/status`).on("value", snap => {
+  const statusRef = db.ref(`sessions/${sessionId}/status`);
+  addFirebaseListener(statusRef, "value", snap => {
     const status = snap.val();
     statusEl.textContent = "Stato sessione: " + (status || "non impostato");
 
     if (status === "started") {
-      // Carica i quesiti e avvia il gioco
-      loadQuestions(currentSessionId, questions => {
+      loadQuestions(sessionId, questions => {
         if (!questions || questions.length === 0) {
           alert("Nessun quesito caricato dal docente.");
           return;
         }
-
-        // Mostra il contenitore del gioco PRIMA di creare Phaser
+        // mostra container e avvia gioco dopo breve pausa
         gameContainer.style.display = "block";
-
-        // Piccola pausa per assicurare il layout su mobile
-        setTimeout(() => {
-          startGame(questions, currentSessionId, currentUserId);
-        }, 60);
+        setTimeout(() => startGame(questions, sessionId, studentId), 60);
       });
     }
 
@@ -97,40 +157,61 @@ function enterSession() {
   });
 }
 
-// ---------- exitSession ----------
-function exitSession() {
-  if (currentSessionId && currentUserId) {
-    db.ref(`sessions/${currentSessionId}/players/${currentUserId}`).remove().catch(err => {
-      console.warn("Errore rimozione player:", err);
-    });
+// ---------- Leave / Exit ----------
+function leaveSessionManual() {
+  if (!ensureFirebaseReady()) { resetStudentUI(); return; }
+
+  if (currentSessionId && studentId) {
+    db.ref(`sessions/${currentSessionId}/players/${studentId}`)
+      .remove()
+      .then(() => resetStudentUI())
+      .catch(err => {
+        console.error("Errore rimozione studente:", err);
+        resetStudentUI();
+      });
+  } else {
+    resetStudentUI();
   }
-  // distruggi gioco se attivo
-  if (gameInstance) {
-    try { gameInstance.destroy(true); } catch(e){/*ignore*/ }
-    gameInstance = null;
-  }
-  // reset UI
-  gameContainer.style.display = "none";
-  joinBtn.style.display = "block";
-  exitBtn.style.display = "none";
-  statusEl.textContent = "Sei uscito.";
 }
 
-// ---------- startGame (Phaser) ----------
-function startGame(questions, sessionId, playerId) {
+function resetStudentUI() {
+  document.getElementById("sessionId").style.display = "block";
+  document.getElementById("displayName").style.display = "block";
+  document.getElementById("joinBtn").style.display = "block";
+  document.getElementById("exitBtn").style.display = "none";
 
-  // distruggi eventuale istanza precedente
+  document.getElementById("status").textContent = "In attesa…";
+  document.getElementById("gameContainer").style.display = "none";
+
+  currentSessionId = null;
+  studentId = null;
+  hasJoined = false;
+  gameEnded = false;
+
   if (gameInstance) {
     try { gameInstance.destroy(true); } catch(e){/*ignore*/ }
     gameInstance = null;
   }
 
-  // Parametri di gioco
+  removeAllFirebaseListeners();
+}
+
+// ---------- Start game (Phaser) ----------
+function startGame(questions, sessionId, playerId) {
+  if (!questions || questions.length === 0) {
+    alert("Nessun quesito disponibile.");
+    return;
+  }
+
+  if (gameInstance) {
+    try { gameInstance.destroy(true); } catch(e){/*ignore*/ }
+    gameInstance = null;
+  }
+
   let currentIndex = 0;
   let score = 0;
   const total = questions.length;
 
-  // Config responsive: usa 400x600 come base, ma il canvas si adatterà al contenitore
   const config = {
     type: Phaser.AUTO,
     width: 400,
@@ -146,51 +227,39 @@ function startGame(questions, sessionId, playerId) {
 
   gameInstance = new Phaser.Game(config);
 
-  // Variabili di scena
-  let fallingObj = null;
+  let fallingText = null;
   let baskets = [];
   let targetBasket = null;
 
-  function preload() {
-    // nessun asset esterno
-  }
+  function preload() {}
 
   function create() {
-    // sfondo semplice
-    this.cameras.main.setBackgroundColor('#ffffff');
-
-    // crea ceste in basso in base alle categorie trovate
     const uniqueBaskets = [...new Set(questions.map(q => q.basket))];
-    const basketCount = Math.max(1, uniqueBaskets.length);
-    const basketWidth = config.width / basketCount;
-
-    baskets = [];
+    const basketWidth = config.width / Math.max(1, uniqueBaskets.length);
 
     uniqueBaskets.forEach((b, i) => {
-      const x = basketWidth * i + basketWidth / 2;
-      const rect = this.add.rectangle(x, 560, basketWidth - 12, 60, 0xeeeeee);
-      rect.setStrokeStyle(2, 0x999999);
-      this.physics.add.existing(rect, true); // corpo statico
+      const rect = this.add.rectangle(
+        basketWidth * i + basketWidth / 2,
+        580,
+        basketWidth - 10,
+        40,
+        0xdddddd
+      );
+      this.physics.add.existing(rect, true);
       rect.basketName = b;
       baskets.push(rect);
 
-      // label
-      this.add.text(x - (basketWidth/2 - 8), 540, b, { fontSize: "14px", color: "#000" });
+      this.add.text(rect.x - 40, 560, b, { fontSize: "14px", color: "#000" });
     });
 
-    // HUD: punteggio e progresso
     this.scoreText = this.add.text(12, 12, `Punteggio: 0`, { fontSize: "16px", color: "#000" });
     this.progressText = this.add.text(12, 34, `Quesito: 0 / ${total}`, { fontSize: "14px", color: "#666" });
 
-    // spawn primo quesito
     spawnQuestion.call(this);
 
-    // touch / click: tocca sinistra o destra per spostare l'oggetto
-    this.input.on('pointerdown', pointer => {
-      if (!fallingObj || !fallingObj.body) return;
-      const mid = config.width / 2;
-      const vx = (pointer.x < mid) ? -180 : 180;
-      fallingObj.body.setVelocityX(vx);
+    this.input.on("pointerdown", pointer => {
+      if (!fallingText || !fallingText.body) return;
+      fallingText.setVelocityX(pointer.x < config.width/2 ? -150 : 150);
     });
   }
 
@@ -203,59 +272,44 @@ function startGame(questions, sessionId, playerId) {
     const q = questions[currentIndex];
     targetBasket = q.basket;
 
-    // crea testo come oggetto e abilita fisica
     const scene = gameInstance.scene.keys[Object.keys(gameInstance.scene.keys)[0]];
-    fallingObj = scene.add.text(config.width/2, 40, q.text, {
-      fontSize: "20px",
-      color: "#000",
-      align: "center",
-      wordWrap: { width: config.width - 40 }
-    });
-    fallingObj.setOrigin(0.5);
-    scene.physics.add.existing(fallingObj);
-    fallingObj.body.setCollideWorldBounds(true);
-    fallingObj.body.setBounce(0);
-    fallingObj.body.setVelocityY(0); // gravity lo farà scendere
+    fallingText = scene.add.text(config.width/2, 50, q.text, { fontSize: "20px", color: "#000", align: "center", wordWrap: { width: config.width - 40 } });
+    fallingText.setOrigin(0.5);
+    scene.physics.add.existing(fallingText);
+    fallingText.body.setCollideWorldBounds(true);
+    fallingText.body.setBounce(0);
+    fallingText.body.setVelocityY(0);
 
-    // collisioni con ceste
     baskets.forEach(b => {
-      scene.physics.add.overlap(fallingObj, b, () => {
-        if (!fallingObj || !fallingObj.active) return;
+      scene.physics.add.overlap(fallingText, b, () => {
+        if (!fallingText || !fallingText.active) return;
 
-        // controllo basket
         if (b.basketName === targetBasket) {
           score++;
           scene.tweens.add({
-            targets: fallingObj,
+            targets: fallingText,
             scaleX: 1.1,
             scaleY: 1.1,
             alpha: 0,
             duration: 250,
-            onComplete: () => {
-              if (fallingObj) fallingObj.destroy();
-            }
+            onComplete: () => { if (fallingText) fallingText.destroy(); }
           });
         } else {
-          // animazione errore (semplice fade)
           scene.tweens.add({
-            targets: fallingObj,
+            targets: fallingText,
             alpha: 0,
             duration: 150,
-            onComplete: () => {
-              if (fallingObj) fallingObj.destroy();
-            }
+            onComplete: () => { if (fallingText) fallingText.destroy(); }
           });
         }
 
-        // aggiorna indice e spawn prossimo
         currentIndex++;
         updateHUD(scene);
-        // piccolo delay per dare tempo all'animazione
         scene.time.delayedCall(200, () => spawnQuestion.call(scene));
       }, null, scene);
     });
 
-    updateHUD(scene);
+    updateHUD(gameInstance.scene.keys[Object.keys(gameInstance.scene.keys)[0]]);
   }
 
   function updateHUD(scene) {
@@ -266,10 +320,9 @@ function startGame(questions, sessionId, playerId) {
   }
 
   function update() {
-    // se l'oggetto cade oltre il fondo senza entrare in una cesta
-    if (fallingObj && fallingObj.y > config.height + 50) {
-      try { fallingObj.destroy(); } catch(e){/*ignore*/ }
-      fallingObj = null;
+    if (fallingText && fallingText.y > config.height + 50) {
+      try { fallingText.destroy(); } catch(e){/*ignore*/ }
+      fallingText = null;
       currentIndex++;
       const scene = gameInstance.scene.keys[Object.keys(gameInstance.scene.keys)[0]];
       updateHUD(scene);
@@ -278,15 +331,14 @@ function startGame(questions, sessionId, playerId) {
   }
 
   function endGame() {
-    // calcolo punteggio proporzionale tra 2 e 10
     const finalScore = Math.max(2, Math.floor(2 + 8 * (score / total)));
 
-    // salva su Firebase
-    db.ref(`sessions/${sessionId}/players/${playerId}/score`).set(finalScore).catch(err => {
-      console.warn("Errore salvataggio punteggio:", err);
-    });
+    if (ensureFirebaseReady()) {
+      db.ref(`sessions/${sessionId}/players/${playerId}/score`).set(finalScore).catch(err => {
+        console.warn("Errore salvataggio punteggio:", err);
+      });
+    }
 
-    // mostra risultato e distruggi gioco
     setTimeout(() => {
       alert("Partita terminata. Punteggio: " + finalScore);
       try { gameInstance.destroy(true); } catch(e){/*ignore*/ }
@@ -297,24 +349,21 @@ function startGame(questions, sessionId, playerId) {
 }
 
 // ---------- Event listeners UI ----------
-joinBtn.addEventListener("click", () => {
-  try {
-    enterSession();
-  } catch (err) {
-    console.error("Errore enterSession:", err);
-    statusEl.textContent = "Errore interno. Controlla console.";
+document.addEventListener("DOMContentLoaded", () => {
+  if (joinBtn) {
+    joinBtn.addEventListener("touchstart", e => { e.preventDefault(); joinSession(); }, { passive: false });
+    joinBtn.addEventListener("click", joinSession);
   }
-});
-
-exitBtn.addEventListener("click", () => {
-  exitSession();
+  if (exitBtn) {
+    exitBtn.addEventListener("touchstart", e => { e.preventDefault(); leaveSessionManual(); }, { passive: false });
+    exitBtn.addEventListener("click", leaveSessionManual);
+  }
 });
 
 // ---------- Controllo iniziale ----------
 window.addEventListener('load', () => {
-  if (typeof firebase === 'undefined' || typeof db === 'undefined') {
-    statusEl.textContent = "Firebase non inizializzato. Controlla la configurazione in firebase-config.js.";
-    debug("Firebase non inizializzato.");
+  if (!ensureFirebaseReady()) {
+    debug("Firebase non inizializzato. Controlla firebase-config.js.");
   } else {
     debug("Pagina pronta. Inserisci codice e cognome, poi premi Entra.");
   }

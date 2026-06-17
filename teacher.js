@@ -1,21 +1,16 @@
-// teacher.js (inizio)
+// teacher.js
+// ATTENZIONE: qui NON dichiariamo db né auth.
+// Devono essere già definiti in firebase-config.js come var db, var auth.
 
-// Usa le istanze già create in firebase-config.js senza ridefinirle
-const auth = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth() : null;
-const db = (typeof window !== 'undefined' && typeof window.db !== 'undefined') ? window.db : (typeof firebase !== 'undefined' ? firebase.database() : null);
-
-if (!db) {
-  console.error("Firebase DB non inizializzato. Controlla firebase-config.js e l'ordine degli script.");
-  const statusEl = document.getElementById && document.getElementById("status");
-  if (statusEl) statusEl.textContent = "Errore Firebase: controlla la configurazione.";
-}
-
+// -------------------------
+// LISTENER UI
+// -------------------------
 document.addEventListener("DOMContentLoaded", () => {
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const createBtn = document.getElementById("createSessionBtn");
-  const deleteBtn = document.getElementById("deleteSessionBtn");
-  const startBtn = document.getElementById("startSessionBtn");
+  const loginBtn   = document.getElementById("loginBtn");
+  const logoutBtn  = document.getElementById("logoutBtn");
+  const createBtn  = document.getElementById("createSessionBtn");
+  const deleteBtn  = document.getElementById("deleteSessionBtn");
+  const startBtn   = document.getElementById("startSessionBtn");
 
   if (loginBtn) {
     loginBtn.addEventListener("touchstart", e => { e.preventDefault(); loginTeacher(); }, { passive: false });
@@ -43,41 +38,50 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+// -------------------------
+// GESTIONE LISTENER FIREBASE
+// -------------------------
 let teacherListeners = [];
+
 function addTeacherListener(ref, event, callback) {
   ref.on(event, callback);
   teacherListeners.push({ ref, event, callback });
 }
+
 function removeTeacherListeners() {
   teacherListeners.forEach(l => l.ref.off(l.event, l.callback));
   teacherListeners = [];
 }
 
-// LOGIN DOCENTE
+// -------------------------
+// LOGIN / LOGOUT DOCENTE
+// -------------------------
 function loginTeacher() {
-  const email = document.getElementById("email").value.trim();
+  const email    = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
 
   auth.signInWithEmailAndPassword(email, password)
     .then(() => {
-      document.getElementById("loginForm").style.display = "none";
+      document.getElementById("loginForm").style.display   = "none";
       document.getElementById("teacherPanel").style.display = "block";
       loadSessionStatus();
     })
     .catch(err => {
+      console.error("Errore login:", err);
       document.getElementById("loginError").textContent = "Credenziali errate";
     });
 }
 
-// LOGOUT
 auth.onAuthStateChanged(user => {
   if (!user) {
     document.getElementById("teacherPanel").style.display = "none";
-    document.getElementById("loginForm").style.display = "block";
+    document.getElementById("loginForm").style.display    = "block";
   }
 });
 
-// CREA SESSIONE
+// -------------------------
+// SESSIONE: CREA / ELIMINA / AVVIA
+// -------------------------
 function createSession() {
   const sessionId = document.getElementById("sessionId").value.trim();
   if (!sessionId) return;
@@ -90,7 +94,6 @@ function createSession() {
   loadSessionStatus();
 }
 
-// ELIMINA SESSIONE
 function deleteSession() {
   const sessionId = document.getElementById("sessionId").value.trim();
   if (!sessionId) return;
@@ -99,7 +102,6 @@ function deleteSession() {
   loadSessionStatus();
 }
 
-// AVVIA PARTITA
 function startSession() {
   const sessionId = document.getElementById("sessionId").value.trim();
   if (!sessionId) return;
@@ -107,70 +109,57 @@ function startSession() {
   db.ref(`sessions/${sessionId}/status`).set("started");
 }
 
+// -------------------------
 // CARICA STATO SESSIONE
+// -------------------------
 function loadSessionStatus() {
-  const sessionId = document.getElementById("sessionId").value.trim();
-  const statusBox = document.getElementById("sessionStatus");
-  const activeBox = document.getElementById("activeSessionBox");
-  const startBox = document.getElementById("startSessionBox");
-  const deleteBtn = document.getElementById("deleteSessionBtn");
+  const sessionId  = document.getElementById("sessionId").value.trim();
+  const statusBox  = document.getElementById("sessionStatus");
+  const activeBox  = document.getElementById("activeSessionBox");
+  const startBox   = document.getElementById("startSessionBox");
+  const deleteBtn  = document.getElementById("deleteSessionBtn");
 
-  // Se non c’è sessionId, UI pulita
+  // Nessun codice sessione → UI pulita
   if (!sessionId) {
-    statusBox.textContent = "Nessuna sessione";
-    activeBox.style.display = "none";
-    startBox.style.display = "none";
-    deleteBtn.style.display = "none";
+    statusBox.textContent      = "Nessuna sessione";
+    activeBox.style.display    = "none";
+    startBox.style.display     = "none";
+    deleteBtn.style.display    = "none";
+    removeTeacherListeners();
     return;
   }
 
-  // Rimuove eventuali listener precedenti
-  if (window.teacherListeners) {
-    window.teacherListeners.forEach(l => l.ref.off(l.event, l.callback));
-  }
-  window.teacherListeners = [];
-
-  function addTeacherListener(ref, event, callback) {
-    ref.on(event, callback);
-    window.teacherListeners.push({ ref, event, callback });
-  }
+  // Rimuovi listener precedenti
+  removeTeacherListeners();
 
   // Listener principale sulla sessione
   addTeacherListener(
     db.ref(`sessions/${sessionId}`),
     "value",
     snap => {
-
-      // Caso: sessione eliminata
       if (!snap.exists()) {
-        statusBox.textContent = "Nessuna sessione attiva";
+        statusBox.textContent   = "Nessuna sessione attiva";
         activeBox.style.display = "none";
-        startBox.style.display = "none";
+        startBox.style.display  = "none";
         deleteBtn.style.display = "none";
         return;
       }
 
-      // Caso: sessione esiste
       const data = snap.val();
 
-      statusBox.textContent = "Sessione attiva";
-      deleteBtn.style.display = "block"; // Mostra sempre elimina sessione
+      statusBox.textContent   = "Sessione attiva";
+      deleteBtn.style.display = "block";
 
-      // Mostra o nasconde il pulsante "Avvia partita"
       if (data.status === "waiting") {
         startBox.style.display = "block";
       } else {
         startBox.style.display = "none";
       }
 
-      // Mantieni visibile il box sessione attiva
       activeBox.style.display = "block";
-
-      // Aggiorna etichetta sessione
       document.getElementById("activeSessionLabel").textContent =
         "Sessione: " + sessionId;
 
-      // Aggiorna lista studenti e punteggi
       updatePlayersList(sessionId);
       updateScores(sessionId);
       updateQuestionsInfo(sessionId);
@@ -178,7 +167,9 @@ function loadSessionStatus() {
   );
 }
 
-// AGGIORNA LISTA STUDENTI
+// -------------------------
+// LISTA STUDENTI
+// -------------------------
 function updatePlayersList(sessionId) {
   const list = document.getElementById("playersList");
   list.innerHTML = "<ul></ul>";
@@ -189,20 +180,19 @@ function updatePlayersList(sessionId) {
     "value",
     snap => {
       ul.innerHTML = "";
-
       snap.forEach(child => {
         const player = child.val();
-
         const li = document.createElement("li");
         li.textContent = player.name || "(senza nome)";
-
         ul.appendChild(li);
       });
     }
   );
 }
 
-// AGGIORNA PUNTEGGI
+// -------------------------
+// PUNTEGGI
+// -------------------------
 function updateScores(sessionId) {
   const scoresBox = document.getElementById("scores");
   scoresBox.innerHTML = "<ol></ol>";
@@ -213,36 +203,30 @@ function updateScores(sessionId) {
     "value",
     snap => {
       ol.innerHTML = "";
-
       snap.forEach(child => {
         const player = child.val();
-
         const li = document.createElement("li");
         li.textContent = `${player.name || "(senza nome)"} – ${player.score || 0}`;
-
         ol.appendChild(li);
       });
     }
   );
 }
 
-
-// -----------------------------
-// GESTIONE FILE EXCEL (3 colonne)
-// -----------------------------
-
-const excelInput = document.getElementById("excelFile");
-const uploadBtn = document.getElementById("uploadExcelBtn");
-const excelStatus = document.getElementById("excelStatus");
+// -------------------------
+// EXCEL: CARICA / ELIMINA
+// -------------------------
+const excelInput     = document.getElementById("excelFile");
+const uploadBtn      = document.getElementById("uploadExcelBtn");
+const excelStatus    = document.getElementById("excelStatus");
 const deleteExcelBtn = document.getElementById("deleteExcelBtn");
 
-// Carica Excel
 if (uploadBtn) {
   uploadBtn.addEventListener("click", handleExcelUpload);
 }
 
 function handleExcelUpload() {
-  const file = excelInput.files[0];
+  const file      = excelInput.files[0];
   const sessionId = document.getElementById("sessionId").value.trim();
 
   if (!sessionId) {
@@ -258,33 +242,25 @@ function handleExcelUpload() {
   const reader = new FileReader();
 
   reader.onload = function(e) {
-    const data = new Uint8Array(e.target.result);
+    const data     = new Uint8Array(e.target.result);
     const workbook = XLSX.read(data, { type: "array" });
 
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    const rows  = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-    // Filtra righe con almeno 3 colonne
     const cleaned = rows.filter(r => r.length >= 3);
 
     const questionsRef = db.ref(`sessions/${sessionId}/questions`);
-    questionsRef.set({}); // reset totale
+    questionsRef.set({}); // reset
 
     cleaned.forEach((row, index) => {
-      if (index === 0) return; // salta intestazione
-
+      if (index === 0) return; // intestazione
       const [id, text, basket] = row;
-
-      questionsRef.child(id).set({
-        id,
-        text,
-        basket
-      });
+      questionsRef.child(id).set({ id, text, basket });
     });
 
     excelStatus.textContent = "File caricato correttamente.";
     updateQuestionsInfo(sessionId);
-
     deleteExcelBtn.style.display = "block";
     updateStartButtonVisibility(sessionId);
   };
@@ -292,7 +268,6 @@ function handleExcelUpload() {
   reader.readAsArrayBuffer(file);
 }
 
-// Elimina file caricato
 if (deleteExcelBtn) {
   deleteExcelBtn.addEventListener("click", () => {
     const sessionId = document.getElementById("sessionId").value.trim();
@@ -301,32 +276,23 @@ if (deleteExcelBtn) {
     db.ref(`sessions/${sessionId}/questions`).remove();
     excelStatus.textContent = "File eliminato.";
     updateQuestionsInfo(sessionId);
-
     deleteExcelBtn.style.display = "none";
     updateStartButtonVisibility(sessionId);
   });
 }
 
-// Mostra/nasconde il pulsante Avvia partita
 function updateStartButtonVisibility(sessionId) {
   const startBox = document.getElementById("startSessionBox");
-
   db.ref(`sessions/${sessionId}/questions`).once("value", snap => {
-    if (snap.exists()) {
-      startBox.style.display = "block";
-    } else {
-      startBox.style.display = "none";
-    }
+    startBox.style.display = snap.exists() ? "block" : "none";
   });
 }
 
-
-// -----------------------------
-// INFO SINTETICHE QUESITI
-// -----------------------------
-
+// -------------------------
+// INFO QUESITI
+// -------------------------
 function updateQuestionsInfo(sessionId) {
-  const box = document.getElementById("questionsInfo");
+  const box       = document.getElementById("questionsInfo");
   const countSpan = document.getElementById("qCount");
   const basketsSpan = document.getElementById("qBaskets");
 
@@ -336,19 +302,13 @@ function updateQuestionsInfo(sessionId) {
       return;
     }
 
-    const data = snap.val();
-    const keys = Object.keys(data);
-
-    // Numero quesiti
+    const data  = snap.val();
+    const keys  = Object.keys(data);
     const count = keys.length;
-
-    // Ceste uniche
     const baskets = [...new Set(keys.map(k => data[k].basket))];
 
-    // Aggiorna UI
-    countSpan.textContent = count;
+    countSpan.textContent   = count;
     basketsSpan.textContent = baskets.join(", ");
-
-    box.style.display = "block";
+    box.style.display       = "block";
   });
 }

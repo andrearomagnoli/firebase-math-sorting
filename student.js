@@ -1,96 +1,48 @@
-// Firebase è già inizializzato in firebase-config.js
-const db = firebase.database();
+// student.js
 
+// ---------- Variabili globali ----------
 let currentSessionId = null;
-let studentId = null;
-let hasJoined = false;
-
+let currentUserId = null;
 let gameInstance = null;
-let gameEnded = false;
 
-// TIMER E PUNTEGGIO
-let timeLeft = 10;
-let score = 0;
-let timerText = null;
-let scoreText = null;
+// Elementi UI
+const joinBtn = document.getElementById("joinBtn");
+const exitBtn = document.getElementById("exitBtn");
+const statusEl = document.getElementById("status");
+const debugEl = document.getElementById("debug");
+const gameContainer = document.getElementById("gameContainer");
 
-// Lista dei listener Firebase attivi
-let firebaseListeners = [];
-
-function addFirebaseListener(ref, event, callback) {
-  ref.on(event, callback);
-  firebaseListeners.push({ ref, event, callback });
+// Debug helper
+function debug(msg) {
+  console.log(msg);
+  if (debugEl) {
+    debugEl.style.display = "block";
+    debugEl.textContent = msg;
+  }
 }
 
-function removeAllFirebaseListeners() {
-  firebaseListeners.forEach(l => {
-    l.ref.off(l.event, l.callback);
-  });
-  firebaseListeners = [];
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  const joinBtn = document.getElementById("joinBtn");
-  const exitBtn = document.getElementById("exitBtn");
-
-  if (joinBtn) {
-    joinBtn.addEventListener("touchstart", e => { e.preventDefault(); joinSession(); }, { passive: false });
-    joinBtn.addEventListener("click", joinSession);
-  }
-
-  if (exitBtn) {
-    exitBtn.addEventListener("touchstart", e => { e.preventDefault(); leaveSessionManual(); }, { passive: false });
-    exitBtn.addEventListener("click", leaveSessionManual);
-  }
-});
-
-
-// ---------------------------------------------------------
-// 1) ENTRA NELLA SESSIONE (con controllo esistenza)
-// ---------------------------------------------------------
-function joinSession() {
-  if (hasJoined) return;
-  hasJoined = true;
-
-  const sessionIdInput = document.getElementById("sessionId");
-  const displayNameInput = document.getElementById("displayName");
-
-  const sessionId = sessionIdInput.value.trim();
-  const name = displayNameInput.value.trim();
-
-  if (!sessionId || !name) {
-    alert("Inserisci codice sessione e cognome.");
-    hasJoined = false;
-    return;
-  }
-
-  db.ref(`sessions/${sessionId}`).once("value").then(snap => {
+// ---------- Funzione per caricare i quesiti ----------
+function loadQuestions(sessionId, callback) {
+  db.ref(`sessions/${sessionId}/questions`).once("value", snap => {
     if (!snap.exists()) {
-      alert("La sessione non esiste. Controlla il codice.");
-      hasJoined = false;
+      callback([]);
       return;
     }
-
     const data = snap.val();
-
-    if (data.status === "finished") {
-      alert("La sessione è terminata. Non puoi più entrare.");
-      hasJoined = false;
-      return;
-    }
-
-    enterSession(sessionId, name);
+    const arr = Object.keys(data).map(k => data[k]);
+    // Ordina per id per stabilità (opzionale)
+    arr.sort((a, b) => (a.id > b.id ? 1 : -1));
+    callback(arr);
+  }, err => {
+    console.error("Errore lettura questions:", err);
+    callback([]);
   });
 }
 
-
-// ---------------------------------------------------------
-// 2) ENTRA NELLA SESSIONE E CARICA LE DOMANDE
-// ---------------------------------------------------------
+// ---------- enterSession ----------
 function enterSession() {
   const sessionId = document.getElementById("sessionId").value.trim();
   const displayName = document.getElementById("displayName").value.trim();
-  const statusEl = document.getElementById("status");
 
   if (!sessionId || !displayName) {
     statusEl.textContent = "Inserisci cognome e codice partita.";
@@ -100,36 +52,41 @@ function enterSession() {
   currentSessionId = sessionId;
   currentUserId = "guest_" + Math.random().toString(36).substring(2, 10);
 
-  // Registra lo studente
-  db.ref(`sessions/${sessionId}/players/${currentUserId}`).set({
+  // Registra lo studente nella sessione
+  db.ref(`sessions/${currentSessionId}/players/${currentUserId}`).set({
     name: displayName,
     score: 0
+  }).then(() => {
+    statusEl.textContent = "Registrato. In attesa dell'avvio della partita...";
+    debug("Registrazione completata: " + currentUserId);
+  }).catch(err => {
+    console.error("Errore registrazione player:", err);
+    statusEl.textContent = "Errore registrazione.";
   });
 
-  document.getElementById("exitBtn").style.display = "block";
-  document.getElementById("joinBtn").style.display = "none";
+  exitBtn.style.display = "block";
+  joinBtn.style.display = "none";
 
   // Listener sullo stato della sessione
-  db.ref(`sessions/${sessionId}/status`).on("value", snap => {
+  db.ref(`sessions/${currentSessionId}/status`).on("value", snap => {
     const status = snap.val();
-    statusEl.textContent = "Stato sessione: " + status;
+    statusEl.textContent = "Stato sessione: " + (status || "non impostato");
 
     if (status === "started") {
-      loadQuestions(sessionId, questions => {
-
-        if (questions.length === 0) {
+      // Carica i quesiti e avvia il gioco
+      loadQuestions(currentSessionId, questions => {
+        if (!questions || questions.length === 0) {
           alert("Nessun quesito caricato dal docente.");
           return;
         }
 
-        // MOSTRA IL CANVAS PRIMA DI CREARE PHASER
-        const container = document.getElementById("gameContainer");
-        container.style.display = "block";
+        // Mostra il contenitore del gioco PRIMA di creare Phaser
+        gameContainer.style.display = "block";
 
-        // PICCOLA PAUSA PER MOBILE
+        // Piccola pausa per assicurare il layout su mobile
         setTimeout(() => {
-          startGame(questions, sessionId, currentUserId);
-        }, 50);
+          startGame(questions, currentSessionId, currentUserId);
+        }, 60);
       });
     }
 
@@ -140,77 +97,40 @@ function enterSession() {
   });
 }
 
-function loadQuestions(sessionId, callback) {
-  db.ref(`sessions/${sessionId}/questions`).once("value", snap => {
-    if (!snap.exists()) {
-      callback([]);
-      return;
-    }
-    const data = snap.val();
-    const arr = Object.keys(data).map(k => data[k]);
-    callback(arr);
-  });
-}
-
-
-// ---------------------------------------------------------
-// 3) USCITA MANUALE (studente preme "Esci")
-// ---------------------------------------------------------
-function leaveSessionManual() {
-  if (currentSessionId && studentId) {
-    db.ref(`sessions/${currentSessionId}/players/${studentId}`)
-      .remove()
-      .then(() => {
-        resetStudentUI();
-      })
-      .catch(err => {
-        console.error("Errore rimozione studente:", err);
-        resetStudentUI();
-      });
-  } else {
-    resetStudentUI();
+// ---------- exitSession ----------
+function exitSession() {
+  if (currentSessionId && currentUserId) {
+    db.ref(`sessions/${currentSessionId}/players/${currentUserId}`).remove().catch(err => {
+      console.warn("Errore rimozione player:", err);
+    });
   }
-}
-
-
-// ---------------------------------------------------------
-// 4) RESET UI
-// ---------------------------------------------------------
-function resetStudentUI() {
-  document.getElementById("sessionId").style.display = "block";
-  document.getElementById("displayName").style.display = "block";
-  document.getElementById("joinBtn").style.display = "block";
-  document.getElementById("exitBtn").style.display = "none";
-
-  document.getElementById("status").textContent = "In attesa…";
-  document.getElementById("gameContainer").style.display = "none";
-
-  currentSessionId = null;
-  studentId = null;
-  hasJoined = false;
-  gameEnded = false;
-
+  // distruggi gioco se attivo
   if (gameInstance) {
-    gameInstance.destroy(true);
+    try { gameInstance.destroy(true); } catch(e){/*ignore*/ }
     gameInstance = null;
   }
+  // reset UI
+  gameContainer.style.display = "none";
+  joinBtn.style.display = "block";
+  exitBtn.style.display = "none";
+  statusEl.textContent = "Sei uscito.";
 }
 
-
-// ---------------------------------------------------------
-// 5) AVVIO GIOCO
-// ---------------------------------------------------------
+// ---------- startGame (Phaser) ----------
 function startGame(questions, sessionId, playerId) {
 
+  // distruggi eventuale istanza precedente
   if (gameInstance) {
-    gameInstance.destroy(true);
+    try { gameInstance.destroy(true); } catch(e){/*ignore*/ }
     gameInstance = null;
   }
 
+  // Parametri di gioco
   let currentIndex = 0;
   let score = 0;
   const total = questions.length;
 
+  // Config responsive: usa 400x600 come base, ma il canvas si adatterà al contenitore
   const config = {
     type: Phaser.AUTO,
     width: 400,
@@ -226,38 +146,51 @@ function startGame(questions, sessionId, playerId) {
 
   gameInstance = new Phaser.Game(config);
 
-  let fallingText;
+  // Variabili di scena
+  let fallingObj = null;
   let baskets = [];
-  let targetBasket;
+  let targetBasket = null;
 
-  function preload() {}
+  function preload() {
+    // nessun asset esterno
+  }
 
   function create() {
+    // sfondo semplice
+    this.cameras.main.setBackgroundColor('#ffffff');
 
-    // Ceste
+    // crea ceste in basso in base alle categorie trovate
     const uniqueBaskets = [...new Set(questions.map(q => q.basket))];
-    const basketWidth = 400 / uniqueBaskets.length;
+    const basketCount = Math.max(1, uniqueBaskets.length);
+    const basketWidth = config.width / basketCount;
+
+    baskets = [];
 
     uniqueBaskets.forEach((b, i) => {
-      const rect = this.add.rectangle(
-        basketWidth * i + basketWidth / 2,
-        580,
-        basketWidth - 10,
-        40,
-        0xdddddd
-      );
-      this.physics.add.existing(rect, true);
+      const x = basketWidth * i + basketWidth / 2;
+      const rect = this.add.rectangle(x, 560, basketWidth - 12, 60, 0xeeeeee);
+      rect.setStrokeStyle(2, 0x999999);
+      this.physics.add.existing(rect, true); // corpo statico
       rect.basketName = b;
       baskets.push(rect);
 
-      this.add.text(rect.x - 40, 560, b, { fontSize: "14px", color: "#000" });
+      // label
+      this.add.text(x - (basketWidth/2 - 8), 540, b, { fontSize: "14px", color: "#000" });
     });
 
+    // HUD: punteggio e progresso
+    this.scoreText = this.add.text(12, 12, `Punteggio: 0`, { fontSize: "16px", color: "#000" });
+    this.progressText = this.add.text(12, 34, `Quesito: 0 / ${total}`, { fontSize: "14px", color: "#666" });
+
+    // spawn primo quesito
     spawnQuestion.call(this);
 
-    this.input.on("pointerdown", pointer => {
-      if (!fallingText) return;
-      fallingText.setVelocityX(pointer.x < 200 ? -150 : 150);
+    // touch / click: tocca sinistra o destra per spostare l'oggetto
+    this.input.on('pointerdown', pointer => {
+      if (!fallingObj || !fallingObj.body) return;
+      const mid = config.width / 2;
+      const vx = (pointer.x < mid) ? -180 : 180;
+      fallingObj.body.setVelocityX(vx);
     });
   }
 
@@ -270,97 +203,119 @@ function startGame(questions, sessionId, playerId) {
     const q = questions[currentIndex];
     targetBasket = q.basket;
 
-    fallingText = this.physics.add.text(200, 50, q.text, {
+    // crea testo come oggetto e abilita fisica
+    const scene = gameInstance.scene.keys[Object.keys(gameInstance.scene.keys)[0]];
+    fallingObj = scene.add.text(config.width/2, 40, q.text, {
       fontSize: "20px",
-      color: "#000"
+      color: "#000",
+      align: "center",
+      wordWrap: { width: config.width - 40 }
     });
-    fallingText.setOrigin(0.5);
+    fallingObj.setOrigin(0.5);
+    scene.physics.add.existing(fallingObj);
+    fallingObj.body.setCollideWorldBounds(true);
+    fallingObj.body.setBounce(0);
+    fallingObj.body.setVelocityY(0); // gravity lo farà scendere
 
+    // collisioni con ceste
     baskets.forEach(b => {
-      this.physics.add.overlap(fallingText, b, () => {
-        if (!fallingText.active) return;
+      scene.physics.add.overlap(fallingObj, b, () => {
+        if (!fallingObj || !fallingObj.active) return;
 
-        if (b.basketName === targetBasket) score++;
+        // controllo basket
+        if (b.basketName === targetBasket) {
+          score++;
+          scene.tweens.add({
+            targets: fallingObj,
+            scaleX: 1.1,
+            scaleY: 1.1,
+            alpha: 0,
+            duration: 250,
+            onComplete: () => {
+              if (fallingObj) fallingObj.destroy();
+            }
+          });
+        } else {
+          // animazione errore (semplice fade)
+          scene.tweens.add({
+            targets: fallingObj,
+            alpha: 0,
+            duration: 150,
+            onComplete: () => {
+              if (fallingObj) fallingObj.destroy();
+            }
+          });
+        }
 
-        fallingText.destroy();
+        // aggiorna indice e spawn prossimo
         currentIndex++;
-        spawnQuestion.call(this);
-      });
+        updateHUD(scene);
+        // piccolo delay per dare tempo all'animazione
+        scene.time.delayedCall(200, () => spawnQuestion.call(scene));
+      }, null, scene);
     });
+
+    updateHUD(scene);
+  }
+
+  function updateHUD(scene) {
+    if (scene && scene.scoreText) {
+      scene.scoreText.setText(`Punteggio: ${score}`);
+      scene.progressText.setText(`Quesito: ${Math.min(currentIndex, total)} / ${total}`);
+    }
   }
 
   function update() {
-    if (fallingText && fallingText.y > 620) {
-      fallingText.destroy();
+    // se l'oggetto cade oltre il fondo senza entrare in una cesta
+    if (fallingObj && fallingObj.y > config.height + 50) {
+      try { fallingObj.destroy(); } catch(e){/*ignore*/ }
+      fallingObj = null;
       currentIndex++;
-      spawnQuestion.call(this);
+      const scene = gameInstance.scene.keys[Object.keys(gameInstance.scene.keys)[0]];
+      updateHUD(scene);
+      spawnQuestion.call(scene);
     }
   }
 
   function endGame() {
+    // calcolo punteggio proporzionale tra 2 e 10
     const finalScore = Math.max(2, Math.floor(2 + 8 * (score / total)));
 
-    db.ref(`sessions/${sessionId}/players/${playerId}/score`).set(finalScore);
+    // salva su Firebase
+    db.ref(`sessions/${sessionId}/players/${playerId}/score`).set(finalScore).catch(err => {
+      console.warn("Errore salvataggio punteggio:", err);
+    });
 
-    alert("Partita terminata. Punteggio: " + finalScore);
+    // mostra risultato e distruggi gioco
+    setTimeout(() => {
+      alert("Partita terminata. Punteggio: " + finalScore);
+      try { gameInstance.destroy(true); } catch(e){/*ignore*/ }
+      gameInstance = null;
+      gameContainer.style.display = "none";
+    }, 100);
   }
 }
 
-
-// ---------------------------------------------------------
-// 6) FINE PARTITA
-// ---------------------------------------------------------
-function endGame() {
-  if (gameEnded) return;
-  gameEnded = true;
-
-  if (currentSessionId && studentId) {
-    db.ref(`sessions/${currentSessionId}/players/${studentId}/score`)
-      .set(score)
-      .then(() => db.ref(`sessions/${currentSessionId}/status`).set("finished"))
-      .then(() => {
-        alert("Partita terminata! Punteggio: " + score);
-        removeAllFirebaseListeners();
-        resetStudentUI();
-      });
+// ---------- Event listeners UI ----------
+joinBtn.addEventListener("click", () => {
+  try {
+    enterSession();
+  } catch (err) {
+    console.error("Errore enterSession:", err);
+    statusEl.textContent = "Errore interno. Controlla console.";
   }
-}
+});
 
+exitBtn.addEventListener("click", () => {
+  exitSession();
+});
 
-// ---------------------------------------------------------
-// 7) SCENA PHASER
-// ---------------------------------------------------------
-function preload() {}
-
-function create() {
-  timeLeft = 10;
-  score = 0;
-
-  timerText = this.add.text(20, 20, "Tempo: 10", {
-    font: "24px Arial",
-    fill: "#000"
-  });
-
-  scoreText = this.add.text(20, 60, "Punteggio: 0", {
-    font: "24px Arial",
-    fill: "#000"
-  });
-
-  this.time.addEvent({
-    delay: 1000,
-    callback: () => {
-      timeLeft--;
-      timerText.setText("Tempo: " + timeLeft);
-
-      score += Phaser.Math.Between(1, 5);
-      scoreText.setText("Punteggio: " + score);
-
-      if (timeLeft <= 0) {
-        endGame();
-      }
-    },
-    loop: true
-  });
-}
-
-function update() {}
+// ---------- Controllo iniziale ----------
+window.addEventListener('load', () => {
+  if (typeof firebase === 'undefined' || typeof db === 'undefined') {
+    statusEl.textContent = "Firebase non inizializzato. Controlla la configurazione in firebase-config.js.";
+    debug("Firebase non inizializzato.");
+  } else {
+    debug("Pagina pronta. Inserisci codice e cognome, poi premi Entra.");
+  }
+});

@@ -80,7 +80,9 @@ function enterSession(sessionId, name) {
         }
 
         const container = document.getElementById("gameContainer");
-        container.style.display = "visible";
+
+        // FIX 1: display deve essere "block", non "visible"
+        container.style.display = "block";
 
         // MOBILE SAFE: aspetta due frame prima di creare Phaser
         requestAnimationFrame(() => {
@@ -152,6 +154,11 @@ function startGame(questions, sessionId, studentId) {
     input: {
       activePointers: 3,
       touch: true
+    },
+    // FIX 2: scala corretta per mobile / resize
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
     },
     scene: { preload, create, update }
   };

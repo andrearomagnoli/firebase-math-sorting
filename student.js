@@ -80,12 +80,13 @@ function enterSession(sessionId, name) {
         }
 
         const container = document.getElementById("gameContainer");
-        container.style.display = "block";
+        container.style.display = "visible";
 
         // MOBILE SAFE: aspetta due frame prima di creare Phaser
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             console.log("Container size:", container.clientWidth, container.clientHeight);
+            document.body.addEventListener("touchstart", () => {}, { passive: true });
             startGame(questions, sessionId, studentId);
           });
         });
@@ -228,8 +229,8 @@ function startGame(questions, sessionId, studentId) {
     scene.physics.add.existing(falling);
 
     // 4) HITBOX CORRETTA
-    falling.body.setSize(label.width, label.height);
-    falling.body.setOffset(-label.width/2, -label.height/2);
+    falling.body.setSize(200, 60);
+    falling.body.setOffset(-100, -30);
 
     falling.body.setVelocityY(0);
     falling.body.setBounce(0);

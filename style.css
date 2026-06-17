@@ -19,12 +19,13 @@ button, .btn {
 }
 
 #gameContainer {
-  pointer-events: none;
-}
-
-#gameContainer canvas {
-  width: 100% !important;
-  height: 100% !important;
+  width: 400px;
+  height: 600px;
+  min-width: 400px;
+  min-height: 600px;
+  position: relative;
+  background: white;
+  visibility: hidden; /* invece di display:none */
 }
 
 .card, .container, section {

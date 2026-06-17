@@ -12,26 +12,6 @@ h1 {
   margin-bottom: 30px;
 }
 
-button, .btn {
-  position: relative;
-  z-index: 20;
-  cursor: pointer;
-}
-
-#gameContainer {
-  width: 400px;
-  height: 600px;
-  min-width: 400px;
-  min-height: 600px;
-  position: relative;
-  background: white;
-  visibility: hidden; /* invece di display:none */
-}
-
-.card, .container, section {
-  pointer-events: auto;
-}
-
 /* =========================================
    CARD E CONTENITORI
 ========================================= */

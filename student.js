@@ -1,134 +1,3 @@
-// student.js
-// NON dichiarare db o auth qui. Arrivano da firebase-config.js.
-
-// Aspetta Firebase prima di partire
-function waitForFirebase(callback) {
-  const check = setInterval(() => {
-    if (typeof firebase !== "undefined" &&
-        firebase.apps.length > 0 &&
-        typeof db !== "undefined") {
-      clearInterval(check);
-      callback();
-    }
-  }, 50);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  waitForFirebase(() => {
-    console.log("Firebase pronto – student.js avviato");
-    initStudent();
-  });
-});
-
-// -------------------------
-// VARIABILI GLOBALI
-// -------------------------
-let currentSessionId = null;
-let studentId = null;
-let gameInstance = null;
-
-// -------------------------
-// INIZIALIZZAZIONE UI
-// -------------------------
-function initStudent() {
-  document.getElementById("joinBtn").addEventListener("click", joinSession);
-  document.getElementById("exitBtn").addEventListener("click", leaveSession);
-}
-
-// -------------------------
-// JOIN SESSIONE
-// -------------------------
-function joinSession() {
-  const sessionId = document.getElementById("sessionId").value.trim();
-  const name = document.getElementById("displayName").value.trim();
-
-  if (!sessionId || !name) {
-    alert("Inserisci codice sessione e cognome.");
-    return;
-  }
-
-  db.ref(`sessions/${sessionId}`).once("value").then(snap => {
-    if (!snap.exists()) {
-      alert("La sessione non esiste.");
-      return;
-    }
-    enterSession(sessionId, name);
-  });
-}
-
-function enterSession(sessionId, name) {
-  currentSessionId = sessionId;
-  studentId = "guest_" + Math.random().toString(36).substring(2, 10);
-
-  db.ref(`sessions/${sessionId}/players/${studentId}`).set({
-    name,
-    score: 0
-  });
-
-  document.getElementById("joinBtn").style.display = "none";
-  document.getElementById("exitBtn").style.display = "block";
-
-  db.ref(`sessions/${sessionId}/status`).on("value", snap => {
-    const status = snap.val();
-    document.getElementById("status").textContent = "Stato sessione: " + status;
-
-    if (status === "started") {
-      loadQuestions(sessionId, questions => {
-        if (!questions.length) {
-          alert("Nessun quesito caricato.");
-          return;
-        }
-
-        const container = document.getElementById("gameContainer");
-        container.style.display = "visible";
-
-        // MOBILE SAFE: aspetta due frame prima di creare Phaser
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            console.log("Container size:", container.clientWidth, container.clientHeight);
-            document.body.addEventListener("touchstart", () => {}, { passive: true });
-            startGame(questions, sessionId, studentId);
-          });
-        });
-      });
-    }
-  });
-}
-
-// -------------------------
-// CARICA QUESITI
-// -------------------------
-function loadQuestions(sessionId, callback) {
-  db.ref(`sessions/${sessionId}/questions`).once("value").then(snap => {
-    if (!snap.exists()) return callback([]);
-    callback(Object.values(snap.val()));
-  });
-}
-
-// -------------------------
-// USCITA
-// -------------------------
-function leaveSession() {
-  if (currentSessionId && studentId) {
-    db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove();
-  }
-
-  if (gameInstance) {
-    try { gameInstance.destroy(true); } catch(e){}
-    gameInstance = null;
-  }
-
-  document.getElementById("gameContainer").style.display = "none";
-  document.getElementById("joinBtn").style.display = "block";
-  document.getElementById("exitBtn").style.display = "none";
-
-  currentSessionId = null;
-  studentId = null;
-}
-
-// -------------------------
-// GIOCO PHASER (VERSIONE DEFINITIVA)
-// -------------------------
 function startGame(questions, sessionId, studentId) {
 
   if (gameInstance) {
@@ -145,22 +14,14 @@ function startGame(questions, sessionId, studentId) {
     height: 600,
     parent: "gameContainer",
     backgroundColor: "#ffffff",
-
     physics: {
       default: "arcade",
-      arcade: { gravity: { y: 180 }, debug: false }
+      arcade: { gravity: { y: 200 }, debug: false }
     },
-
     input: {
       activePointers: 3,
       touch: true
     },
-
-    scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH
-    },
-
     scene: { preload, create, update }
   };
 
@@ -211,32 +72,23 @@ function startGame(questions, sessionId, studentId) {
 
     const scene = this;
 
-    // 1) CREA UN CONTENITORE
-    falling = scene.add.container(200, 50);
-
-    // 2) AGGIUNGI IL TESTO DENTRO IL CONTENITORE
-    const label = scene.add.text(0, 0, q.text, {
+    falling = scene.add.text(200, 50, q.text, {
       fontSize: "20px",
       color: "#000",
       align: "center",
       wordWrap: { width: 360 }
     });
-    label.setOrigin(0.5);
+    falling.setOrigin(0.5);
 
-    falling.add(label);
-
-    // 3) AGGIUNGI LA FISICA AL CONTENITORE (Safari-friendly)
     scene.physics.add.existing(falling);
 
-    // 4) HITBOX CORRETTA
-    falling.body.setSize(200, 60);
-    falling.body.setOffset(-100, -30);
+    falling.body.setSize(falling.width, falling.height);
+    falling.body.setOffset(0, 0);
 
     falling.body.setVelocityY(0);
     falling.body.setBounce(0);
     falling.body.setCollideWorldBounds(false);
 
-    // 5) COLLISIONI
     baskets.forEach(b => {
       scene.physics.add.overlap(falling, b, () => {
         if (!falling.active) return;

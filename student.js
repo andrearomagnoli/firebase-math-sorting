@@ -214,11 +214,28 @@ function endGameForced() {
 // -------------------------
 // GIOCO PHASER
 // -------------------------
+function requestFullscreen() {
+  const elem = document.documentElement;
+
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen();
+  } else if (elem.webkitRequestFullscreen) { // iOS Safari
+    elem.webkitRequestFullscreen();
+  } else if (elem.msRequestFullscreen) {
+    elem.msRequestFullscreen();
+  }
+}
+
 function startGame(questions, sessionId, studentId) {
 
   if (gameInstance) {
     try { gameInstance.destroy(true); } catch(e){}
     gameInstance = null;
+  }
+
+  // 🔥 Fullscreen automatico su mobile
+  if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+    requestFullscreen();
   }
 
   let index = 0;

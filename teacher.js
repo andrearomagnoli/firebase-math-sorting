@@ -119,10 +119,7 @@ function finishSession() {
   const sessionId = document.getElementById("sessionId").value.trim();
   if (!sessionId) return;
 
-  // 🔥 Stato finale della sessione
   db.ref(`sessions/${sessionId}/status`).set("finished");
-
-  alert("Partita terminata. Gli studenti non possono più modificare il punteggio.");
 }
 
 // -------------------------
@@ -166,17 +163,23 @@ function loadSessionStatus() {
       statusBox.textContent   = "Sessione attiva";
       deleteBtn.style.display = "block";
 
+      const startBtn  = document.getElementById("startSessionBtn");
+      const finishBtn = document.getElementById("finishSessionBtn");
+
       if (data.status === "waiting") {
         startBox.style.display = "block";
-        document.getElementById("finishSessionBtn").style.display = "none";
+        if (startBtn)  startBtn.style.display  = "inline-block";
+        if (finishBtn) finishBtn.style.display = "none";
       }
       else if (data.status === "started") {
-        startBox.style.display = "none";
-        document.getElementById("finishSessionBtn").style.display = "block";
+        startBox.style.display = "block"; // il box resta visibile
+        if (startBtn)  startBtn.style.display  = "none";
+        if (finishBtn) finishBtn.style.display = "inline-block";
       }
       else if (data.status === "finished") {
         startBox.style.display = "none";
-        document.getElementById("finishSessionBtn").style.display = "none";
+        if (startBtn)  startBtn.style.display  = "none";
+        if (finishBtn) finishBtn.style.display = "none";
       }
 
       activeBox.style.display = "block";
@@ -206,10 +209,12 @@ function updatePlayersList(sessionId) {
       snap.forEach(child => {
         const player = child.val();
         const li = document.createElement("li");
+
         let label = player.name || "(senza nome)";
         if (player.leftEarly) {
           label += " (uscito prima)";
         }
+
         li.textContent = label;
 
         ul.appendChild(li);

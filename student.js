@@ -111,29 +111,24 @@ function loadQuestions(sessionId, callback) {
 // USCITA
 // -------------------------
 function leaveSession() {
-
-  if (!currentSessionId || !studentId) {
-    resetUI();
-    return;
+  if (currentSessionId && studentId) {
+    // NON cancelliamo il record, segniamo solo che è uscito prima
+    db.ref(`sessions/${currentSessionId}/players/${studentId}`).update({
+      leftEarly: true
+    });
   }
 
-  const playerRef = db.ref(`sessions/${currentSessionId}/players/${studentId}`);
-  const statusRef = db.ref(`sessions/${currentSessionId}/status`);
+  if (gameInstance) {
+    try { gameInstance.destroy(true); } catch(e){}
+    gameInstance = null;
+  }
 
-  statusRef.once("value").then(snap => {
-    const status = snap.val();
+  document.getElementById("gameContainer").style.display = "none";
+  document.getElementById("joinBtn").style.display = "block";
+  document.getElementById("exitBtn").style.display = "none";
 
-    if (status === "started") {
-      playerRef.update({ leftEarly: true });
-      console.log("Studente uscito prima: leftEarly = true");
-    }
-
-    if (status === "finished") {
-      console.log("Partita finita: il punteggio rimane intatto");
-    }
-
-    resetUI();
-  });
+  currentSessionId = null;
+  studentId = null;
 }
 
 function resetUI() {
@@ -284,9 +279,11 @@ function startGame(questions, sessionId, studentId) {
     gameInstance = null;
 
     document.getElementById("gameContainer").style.display = "none";
-
-    // Mostra schermata di login pulita
     document.getElementById("joinBtn").style.display = "block";
     document.getElementById("exitBtn").style.display = "none";
+
+    // opzionale: lo studente può rientrare in un’altra sessione
+    currentSessionId = null;
+    studentId = null;
   }
 }

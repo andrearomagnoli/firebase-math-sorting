@@ -86,6 +86,7 @@ function enterSession(sessionId, name) {
   document.getElementById("exitBtn").style.display = "none";
 
   document.getElementById("status").textContent = "In attesa dell’avvio…";
+  document.getElementById("loginCard").style.display = "none";
 
   // Listener sullo stato della sessione
   db.ref(`sessions/${sessionId}/status`).on("value", snap => {
@@ -155,6 +156,7 @@ function resetUI() {
   }
 
   document.getElementById("gameContainer").style.display = "none";
+  document.getElementById("loginCard").style.display = "block";
 
   // Mostra di nuovo la card di login (schermata iniziale)
   const loginCard = document.querySelector("#studentPanel .card");
@@ -162,7 +164,7 @@ function resetUI() {
 
   document.getElementById("joinBtn").style.display = "block";
   document.getElementById("exitBtn").style.display = "none";
-  
+
   document.querySelector("#studentPanel .card").style.display = "block";
 
   currentSessionId = null;

@@ -49,11 +49,34 @@ function joinSession() {
     return;
   }
 
+  // Se lo studente ha già partecipato a questa sessione → blocco
+  const savedSession = localStorage.getItem("mathSorting_sessionId");
+  const savedStudent = localStorage.getItem("mathSorting_studentId");
+
+  if (savedSession === sessionId && savedStudent) {
+    alert("Hai già partecipato a questa partita. Non puoi rientrare.");
+    return;
+  }
+
+  if (savedSession && savedSession !== sessionId) {
+    localStorage.removeItem("mathSorting_studentId");
+    localStorage.removeItem("mathSorting_sessionId");
+  }
+
   db.ref(`sessions/${sessionId}`).once("value").then(snap => {
     if (!snap.exists()) {
       alert("La sessione non esiste.");
       return;
     }
+
+    const data = snap.val();
+
+    // Se partita iniziata o finita → blocco totale
+    if (data.status === "started" || data.status === "finished") {
+      alert("Non è più possibile entrare: la partita è già iniziata o terminata.");
+      return;
+    }
+
     enterSession(sessionId, name);
   });
 }
@@ -61,6 +84,11 @@ function joinSession() {
 function enterSession(sessionId, name) {
   currentSessionId = sessionId;
   studentId = "guest_" + Math.random().toString(36).substring(2, 10);
+
+  // Salva l'ID studente nel browser
+  localStorage.setItem("mathSorting_studentId", studentId);
+  localStorage.setItem("mathSorting_sessionId", sessionId);
+
   gameFinished = false;
   gameStarted = false;
 

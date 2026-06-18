@@ -69,6 +69,9 @@ function enterSession(sessionId, name) {
     leftEarly: false
   });
 
+  // Nascondi la schermata di login
+  document.querySelector("#studentPanel .card").style.display = "none";
+
   // Se chiude il browser / perde connessione → segnalo "uscito prima"
   db.ref(`sessions/${sessionId}/players/${studentId}`).onDisconnect().update({
     leftEarly: true
@@ -159,6 +162,8 @@ function resetUI() {
 
   document.getElementById("joinBtn").style.display = "block";
   document.getElementById("exitBtn").style.display = "none";
+  
+  document.querySelector("#studentPanel .card").style.display = "block";
 
   currentSessionId = null;
   studentId = null;

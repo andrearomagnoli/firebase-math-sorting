@@ -27,6 +27,7 @@ let currentSessionId = null;
 let studentId = null;
 let gameInstance = null;
 let gameFinished = false;
+let gameStarted = false;
 
 // -------------------------
 // INIZIALIZZAZIONE UI
@@ -61,6 +62,7 @@ function enterSession(sessionId, name) {
   currentSessionId = sessionId;
   studentId = "guest_" + Math.random().toString(36).substring(2, 10);
   gameFinished = false;
+  gameStarted = false;
 
   // Registra lo studente
   db.ref(`sessions/${sessionId}/players/${studentId}`).set({
@@ -88,6 +90,8 @@ function enterSession(sessionId, name) {
 
     // Quando la partita INIZIA
     if (status === "started") {
+
+      gameStarted = true;
 
       // Nascondi login e pulsante Esci
       document.getElementById("loginCard").style.display = "none";
@@ -128,14 +132,23 @@ function loadQuestions(sessionId, callback) {
 }
 
 // -------------------------
-// USCITA (solo DOPO fine partita)
+// USCITA
 // -------------------------
 function leaveSession() {
-  if (!gameFinished) {
+
+  // PRIMA della partita → USCITA PERMESSA
+  if (!gameStarted) {
+    resetUI();
+    return;
+  }
+
+  // DURANTE la partita → USCITA BLOCCATA
+  if (gameStarted && !gameFinished) {
     console.log("Uscita bloccata durante la partita");
     return;
   }
 
+  // DOPO la partita → USCITA PERMESSA
   if (currentSessionId && studentId) {
     db.ref(`sessions/${currentSessionId}/players/${studentId}`).update({
       leftEarly: false
@@ -165,6 +178,7 @@ function resetUI() {
   currentSessionId = null;
   studentId = null;
   gameFinished = false;
+  gameStarted = false;
 }
 
 // -------------------------

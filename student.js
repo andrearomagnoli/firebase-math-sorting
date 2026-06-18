@@ -69,16 +69,19 @@ function enterSession(sessionId, name) {
     leftEarly: false
   });
 
-  // Se chiude il browser → segna "uscito prima"
+  // Se chiude il browser / perde connessione → segnalo "uscito prima"
   db.ref(`sessions/${sessionId}/players/${studentId}`).onDisconnect().update({
     leftEarly: true
   });
 
-  // Nascondi login e pulsante Esci
+  // Nascondi la card di login (schermata iniziale)
+  const loginCard = document.querySelector("#studentPanel .card");
+  if (loginCard) loginCard.style.display = "none";
+
+  // Nascondi pulsante Esci durante la partita
   document.getElementById("joinBtn").style.display = "none";
   document.getElementById("exitBtn").style.display = "none";
 
-  // Mostra solo stato sessione
   document.getElementById("status").textContent = "In attesa dell’avvio…";
 
   // Listener sullo stato della sessione
@@ -104,8 +107,8 @@ function enterSession(sessionId, name) {
       });
     }
 
+    // Se il docente termina la partita mentre lo studente è dentro
     if (status === "finished" && !gameFinished) {
-      // Se il docente termina la partita mentre lo studente è dentro
       endGameForced();
     }
   });
@@ -122,7 +125,7 @@ function loadQuestions(sessionId, callback) {
 }
 
 // -------------------------
-// USCITA
+// USCITA (solo DOPO fine partita)
 // -------------------------
 function leaveSession() {
   if (!gameFinished) {
@@ -139,6 +142,9 @@ function leaveSession() {
   resetUI();
 }
 
+// -------------------------
+// RESET UI
+// -------------------------
 function resetUI() {
   if (gameInstance) {
     try { gameInstance.destroy(true); } catch(e){}
@@ -147,7 +153,10 @@ function resetUI() {
 
   document.getElementById("gameContainer").style.display = "none";
 
-  // Torna alla schermata iniziale
+  // Mostra di nuovo la card di login (schermata iniziale)
+  const loginCard = document.querySelector("#studentPanel .card");
+  if (loginCard) loginCard.style.display = "block";
+
   document.getElementById("joinBtn").style.display = "block";
   document.getElementById("exitBtn").style.display = "none";
 
@@ -157,7 +166,23 @@ function resetUI() {
 }
 
 // -------------------------
-// GIOCO PHASER (VERSIONE DEFINITIVA)
+// FINE PARTITA FORZATA DAL DOCENTE
+// -------------------------
+function endGameForced() {
+  gameFinished = true;
+
+  if (gameInstance) {
+    try { gameInstance.destroy(true); } catch(e) {}
+    gameInstance = null;
+  }
+
+  alert("La partita è stata terminata dal docente.");
+
+  resetUI();
+}
+
+// -------------------------
+// GIOCO PHASER
 // -------------------------
 function startGame(questions, sessionId, studentId) {
 
@@ -183,7 +208,6 @@ function startGame(questions, sessionId, studentId) {
       activePointers: 3,
       touch: true
     },
-    // FIX 2: scala corretta per mobile / resize
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
@@ -287,19 +311,6 @@ function startGame(questions, sessionId, studentId) {
     });
 
     alert("Partita terminata. Punteggio: " + finalScore);
-
-    resetUI();
-  }
-
-  function endGameForced() {
-    gameFinished = true;
-
-    if (gameInstance) {
-      try { gameInstance.destroy(true); } catch(e){}
-      gameInstance = null;
-    }
-
-    alert("La partita è stata terminata dal docente.");
 
     resetUI();
   }

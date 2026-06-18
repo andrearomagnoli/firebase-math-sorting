@@ -77,16 +77,12 @@ function enterSession(sessionId, name) {
     leftEarly: true
   });
 
-  // Nascondi la card di login (schermata iniziale)
-  const loginCard = document.querySelector("#studentPanel .card");
-  if (loginCard) loginCard.style.display = "none";
-
-  // Nascondi pulsante Esci durante la partita
-  document.getElementById("joinBtn").style.display = "none";
-  document.getElementById("exitBtn").style.display = "none";
-
-  document.getElementById("status").textContent = "In attesa dell’avvio…";
+  // Nascondi la schermata di login
   document.getElementById("loginCard").style.display = "none";
+
+  // Mostra pulsante Esci PRIMA dell'inizio della partita
+  document.getElementById("joinBtn").style.display = "none";
+  document.getElementById("exitBtn").style.display = "block";
 
   // Listener sullo stato della sessione
   db.ref(`sessions/${sessionId}/status`).on("value", snap => {
@@ -95,6 +91,8 @@ function enterSession(sessionId, name) {
 
     if (status === "started") {
       loadQuestions(sessionId, questions => {
+        document.getElementById("exitBtn").style.display = "none";
+        
         if (!questions.length) {
           alert("Nessun quesito caricato.");
           return;

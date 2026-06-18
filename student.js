@@ -69,18 +69,15 @@ function enterSession(sessionId, name) {
     leftEarly: false
   });
 
-  // Nascondi la schermata di login
-  document.querySelector("#studentPanel .card").style.display = "none";
-
   // Se chiude il browser / perde connessione → segnalo "uscito prima"
   db.ref(`sessions/${sessionId}/players/${studentId}`).onDisconnect().update({
     leftEarly: true
   });
 
-  // Nascondi la schermata di login
-  document.getElementById("loginCard").style.display = "none";
-
-  // Mostra pulsante Esci PRIMA dell'inizio della partita
+  // PRIMA dell'inizio della partita:
+  // - login visibile
+  // - join nascosto
+  // - esci visibile
   document.getElementById("joinBtn").style.display = "none";
   document.getElementById("exitBtn").style.display = "block";
 
@@ -89,10 +86,14 @@ function enterSession(sessionId, name) {
     const status = snap.val();
     document.getElementById("status").textContent = "Stato sessione: " + status;
 
+    // Quando la partita INIZIA
     if (status === "started") {
+
+      // Nascondi login e pulsante Esci
+      document.getElementById("loginCard").style.display = "none";
+      document.getElementById("exitBtn").style.display = "none";
+
       loadQuestions(sessionId, questions => {
-        document.getElementById("exitBtn").style.display = "none";
-        
         if (!questions.length) {
           alert("Nessun quesito caricato.");
           return;
@@ -154,16 +155,12 @@ function resetUI() {
   }
 
   document.getElementById("gameContainer").style.display = "none";
-  document.getElementById("loginCard").style.display = "block";
 
-  // Mostra di nuovo la card di login (schermata iniziale)
-  const loginCard = document.querySelector("#studentPanel .card");
-  if (loginCard) loginCard.style.display = "block";
+  // Mostra login
+  document.getElementById("loginCard").style.display = "block";
 
   document.getElementById("joinBtn").style.display = "block";
   document.getElementById("exitBtn").style.display = "none";
-
-  document.querySelector("#studentPanel .card").style.display = "block";
 
   currentSessionId = null;
   studentId = null;

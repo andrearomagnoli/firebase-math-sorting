@@ -184,6 +184,10 @@ function updatePlayersList(sessionId) {
         const player = child.val();
         const li = document.createElement("li");
         li.textContent = player.name || "(senza nome)";
+        if (player.leftEarly) {
+          label += " (uscito prima)";
+        }
+
         ul.appendChild(li);
       });
     }

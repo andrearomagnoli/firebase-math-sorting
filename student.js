@@ -111,10 +111,27 @@ function loadQuestions(sessionId, callback) {
 // USCITA
 // -------------------------
 function leaveSession() {
-  if (currentSessionId && studentId) {
-    db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove();
-  }
 
+  // Se la partita è finita, NON cancellare il punteggio
+  const statusRef = db.ref(`sessions/${currentSessionId}/status`);
+  statusRef.once("value").then(snap => {
+    if (snap.val() === "finished") {
+      console.log("Partita finita: leaveSession non rimuove il punteggio.");
+      return;
+    }
+
+    // Comportamento normale durante la partita
+    if (currentSessionId && studentId) {
+      db.ref(`sessions/${currentSessionId}/players/${studentId}`).update({
+        leftEarly: true
+      });
+    }
+
+    resetUI();
+  });
+}
+
+function resetUI() {
   if (gameInstance) {
     try { gameInstance.destroy(true); } catch(e){}
     gameInstance = null;
@@ -252,11 +269,22 @@ function startGame(questions, sessionId, studentId) {
     const finalScore = Math.max(2, Math.floor(2 + 8 * (score / questions.length)));
 
     db.ref(`sessions/${sessionId}/players/${studentId}/score`).set(finalScore);
+    db.ref(`sessions/${sessionId}/players/${studentId}`).update({
+      score: finalScore,
+      leftEarly: false
+    });
 
     alert("Partita terminata. Punteggio: " + finalScore);
 
+    // Distruggi gioco
     try { gameInstance.destroy(true); } catch(e){}
     gameInstance = null;
+
+    // Nascondi canvas
     document.getElementById("gameContainer").style.display = "none";
+
+    // MOSTRA SCHERMATA DI LOGIN PULITA
+    document.getElementById("joinBtn").style.display = "block";
+    document.getElementById("exitBtn").style.display = "none";
   }
 }

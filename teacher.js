@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const createBtn  = document.getElementById("createSessionBtn");
   const deleteBtn  = document.getElementById("deleteSessionBtn");
   const startBtn   = document.getElementById("startSessionBtn");
-  const finishBtn = document.getElementById("finishSessionBtn");
+  const finishBtn  = document.getElementById("finishSessionBtn");
 
   if (loginBtn) {
     loginBtn.addEventListener("touchstart", e => { e.preventDefault(); loginTeacher(); }, { passive: false });
@@ -132,7 +132,6 @@ function loadSessionStatus() {
   const startBox   = document.getElementById("startSessionBox");
   const deleteBtn  = document.getElementById("deleteSessionBtn");
 
-  // Nessun codice sessione → UI pulita
   if (!sessionId) {
     statusBox.textContent      = "Nessuna sessione";
     activeBox.style.display    = "none";
@@ -142,10 +141,8 @@ function loadSessionStatus() {
     return;
   }
 
-  // Rimuovi listener precedenti
   removeTeacherListeners();
 
-  // Listener principale sulla sessione
   addTeacherListener(
     db.ref(`sessions/${sessionId}`),
     "value",
@@ -172,7 +169,7 @@ function loadSessionStatus() {
         if (finishBtn) finishBtn.style.display = "none";
       }
       else if (data.status === "started") {
-        startBox.style.display = "block"; // il box resta visibile
+        startBox.style.display = "block";
         if (startBtn)  startBtn.style.display  = "none";
         if (finishBtn) finishBtn.style.display = "inline-block";
       }
@@ -209,15 +206,15 @@ function updatePlayersList(sessionId) {
       snap.forEach(child => {
         const player = child.val();
 
-        // Pulizia automatica: se non ha nome → elimina record
+        // 🔥 Pulizia automatica: elimina record senza nome
         if (!player.name || player.name.trim().length < 1) {
           child.ref.remove();
           return;
         }
 
         const li = document.createElement("li");
-        let label = player.name;
 
+        let label = player.name;
         if (player.leftEarly) {
           label += " (uscito prima)";
         }
@@ -244,8 +241,15 @@ function updateScores(sessionId) {
       ol.innerHTML = "";
       snap.forEach(child => {
         const player = child.val();
+
+        // 🔥 Pulizia automatica anche qui
+        if (!player.name || player.name.trim().length < 1) {
+          child.ref.remove();
+          return;
+        }
+
         const li = document.createElement("li");
-        let label = `${player.name || "(senza nome)"} – ${player.score || 0}`;
+        let label = `${player.name} – ${player.score || 0}`;
         if (player.leftEarly) label += " (uscito prima)";
         li.textContent = label;
         ol.appendChild(li);

@@ -41,15 +41,6 @@ function initStudent() {
 // JOIN SESSIONE
 // -------------------------
 function joinSession() {
-  // Se lo studente ha già giocato questa sessione → blocco
-  const playedSession = localStorage.getItem("mathSorting_sessionId");
-  const hasPlayed = localStorage.getItem("mathSorting_hasPlayed");
-
-  if (hasPlayed === "true" && playedSession === sessionId) {
-    alert("Hai già partecipato a questa partita. Non puoi rientrare.");
-    return;
-  }
-
   const sessionId = document.getElementById("sessionId").value.trim();
   const name = document.getElementById("displayName").value.trim();
 
@@ -58,9 +49,17 @@ function joinSession() {
     return;
   }
 
-  // Studenti senza nome NON devono mai essere aggiunti
   if (name.trim().length < 1) {
     alert("Inserisci un cognome valido.");
+    return;
+  }
+
+  // Blocco rientro SOLO se lo studente ha completato quella partita
+  const playedSession = localStorage.getItem("mathSorting_sessionId");
+  const hasPlayed = localStorage.getItem("mathSorting_hasPlayed");
+
+  if (hasPlayed === "true" && playedSession === sessionId) {
+    alert("Hai già partecipato a questa partita. Non puoi rientrare.");
     return;
   }
 
@@ -72,45 +71,37 @@ function joinSession() {
 
     const data = snap.val();
 
-    // Se partita iniziata o finita → blocco totale
+    // Blocco totale dopo avvio o fine
     if (data.status === "started" || data.status === "finished") {
       alert("Non è più possibile entrare: la partita è già iniziata o terminata.");
       return;
     }
 
-    // ✔ Prima dell’inizio → ingresso libero
     enterSession(sessionId, name);
   });
 }
 
 function enterSession(sessionId, name) {
-  if (!name || name.trim().length < 1) {
-    alert("Nome non valido.");
-    return;
-  }
+
+  if (!name || name.trim().length < 1) return;
 
   currentSessionId = sessionId;
   studentId = "guest_" + Math.random().toString(36).substring(2, 10);
-
   gameFinished = false;
   gameStarted = false;
 
-  // Registra lo studente
+  // Registra lo studente SOLO se ha nome valido
   db.ref(`sessions/${sessionId}/players/${studentId}`).set({
     name,
     score: 0,
     leftEarly: false
   });
 
-  // Se chiude il browser / perde connessione → segnalo "uscito prima"
+  // onDisconnect → segna uscita, ma NON crea record senza nome
   db.ref(`sessions/${sessionId}/players/${studentId}`).onDisconnect().update({
     leftEarly: true
   });
 
-  // PRIMA dell'inizio della partita:
-  // - login visibile
-  // - join nascosto
-  // - esci visibile
   document.getElementById("joinBtn").style.display = "none";
   document.getElementById("exitBtn").style.display = "block";
 
@@ -119,15 +110,9 @@ function enterSession(sessionId, name) {
     const status = snap.val();
     document.getElementById("status").textContent = "Stato sessione: " + status;
 
-    // Quando la partita INIZIA
     if (status === "started") {
-      // Ora la partita è iniziata → blocco rientro futuro
-      localStorage.setItem("mathSorting_sessionId", sessionId);
-      localStorage.setItem("mathSorting_hasPlayed", "true");
-
       gameStarted = true;
 
-      // Nascondi login e pulsante Esci
       document.getElementById("loginCard").style.display = "none";
       document.getElementById("exitBtn").style.display = "none";
 
@@ -148,7 +133,6 @@ function enterSession(sessionId, name) {
       });
     }
 
-    // Se il docente termina la partita mentre lo studente è dentro
     if (status === "finished" && !gameFinished) {
       endGameForced();
     }
@@ -170,7 +154,6 @@ function loadQuestions(sessionId, callback) {
 // -------------------------
 function leaveSession() {
 
-  // PRIMA della partita → USCITA PERMESSA
   if (!gameStarted) {
     if (currentSessionId && studentId) {
       db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove();
@@ -179,13 +162,11 @@ function leaveSession() {
     return;
   }
 
-  // DURANTE la partita → USCITA BLOCCATA
   if (gameStarted && !gameFinished) {
     console.log("Uscita bloccata durante la partita");
     return;
   }
 
-  // DOPO la partita → USCITA PERMESSA
   if (currentSessionId && studentId) {
     db.ref(`sessions/${currentSessionId}/players/${studentId}`).update({
       leftEarly: false
@@ -205,10 +186,7 @@ function resetUI() {
   }
 
   document.getElementById("gameContainer").style.display = "none";
-
-  // Mostra login
   document.getElementById("loginCard").style.display = "block";
-
   document.getElementById("joinBtn").style.display = "block";
   document.getElementById("exitBtn").style.display = "none";
 
@@ -219,7 +197,7 @@ function resetUI() {
 }
 
 // -------------------------
-// FINE PARTITA FORZATA DAL DOCENTE
+// FINE PARTITA FORZATA
 // -------------------------
 function endGameForced() {
   gameFinished = true;
@@ -230,7 +208,6 @@ function endGameForced() {
   }
 
   alert("La partita è stata terminata dal docente.");
-
   resetUI();
 }
 
@@ -363,6 +340,7 @@ function startGame(questions, sessionId, studentId) {
       leftEarly: false
     });
 
+    // Blocco rientro SOLO dopo aver completato la partita
     localStorage.setItem("mathSorting_sessionId", sessionId);
     localStorage.setItem("mathSorting_hasPlayed", "true");
 

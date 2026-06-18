@@ -132,6 +132,7 @@ function loadSessionStatus() {
   const startBox   = document.getElementById("startSessionBox");
   const deleteBtn  = document.getElementById("deleteSessionBtn");
 
+  // Nessun codice sessione → UI pulita
   if (!sessionId) {
     statusBox.textContent      = "Nessuna sessione";
     activeBox.style.display    = "none";
@@ -141,12 +142,16 @@ function loadSessionStatus() {
     return;
   }
 
+  // Rimuovi listener precedenti
   removeTeacherListeners();
 
+  // Listener principale sulla sessione
   addTeacherListener(
     db.ref(`sessions/${sessionId}`),
     "value",
     snap => {
+
+      // Sessione inesistente
       if (!snap.exists()) {
         statusBox.textContent   = "Nessuna sessione attiva";
         activeBox.style.display = "none";
@@ -157,12 +162,14 @@ function loadSessionStatus() {
 
       const data = snap.val();
 
+      // Sessione esistente
       statusBox.textContent   = "Sessione attiva";
       deleteBtn.style.display = "block";
 
       const startBtn  = document.getElementById("startSessionBtn");
       const finishBtn = document.getElementById("finishSessionBtn");
 
+      // Gestione stato sessione
       if (data.status === "waiting") {
         startBox.style.display = "block";
         if (startBtn)  startBtn.style.display  = "inline-block";
@@ -179,13 +186,18 @@ function loadSessionStatus() {
         if (finishBtn) finishBtn.style.display = "none";
       }
 
+      // Mostra box sessione attiva
       activeBox.style.display = "block";
       document.getElementById("activeSessionLabel").textContent =
         "Sessione: " + sessionId;
 
+      // Aggiorna liste e punteggi
       updatePlayersList(sessionId);
       updateScores(sessionId);
       updateQuestionsInfo(sessionId);
+
+      // 🔥 Aggiorna visibilità del pulsante Avvia partita
+      updateStartButtonVisibility(sessionId);
     }
   );
 }
@@ -327,9 +339,42 @@ if (deleteExcelBtn) {
 }
 
 function updateStartButtonVisibility(sessionId) {
-  const startBox = document.getElementById("startSessionBox");
-  db.ref(`sessions/${sessionId}/questions`).once("value", snap => {
-    startBox.style.display = snap.exists() ? "block" : "none";
+  const startBtn  = document.getElementById("startSessionBtn");
+  const finishBtn = document.getElementById("finishSessionBtn");
+  const startBox  = document.getElementById("startSessionBox");
+
+  db.ref(`sessions/${sessionId}`).once("value", snap => {
+    if (!snap.exists()) {
+      startBox.style.display = "none";
+      return;
+    }
+
+    const data = snap.val();
+
+    // Se non ci sono quesiti → nascondi tutto
+    if (!data.questions || Object.keys(data.questions).length === 0) {
+      startBtn.style.display = "none";
+      finishBtn.style.display = "none";
+      startBox.style.display = "none";
+      return;
+    }
+
+    // Se ci sono quesiti → mostra il box
+    startBox.style.display = "block";
+
+    // Gestione in base allo stato
+    if (data.status === "waiting") {
+      startBtn.style.display = "inline-block";
+      finishBtn.style.display = "none";
+    }
+    else if (data.status === "started") {
+      startBtn.style.display = "none";
+      finishBtn.style.display = "inline-block";
+    }
+    else if (data.status === "finished") {
+      startBtn.style.display = "none";
+      finishBtn.style.display = "none";
+    }
   });
 }
 

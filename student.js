@@ -233,11 +233,6 @@ function startGame(questions, sessionId, studentId) {
     gameInstance = null;
   }
 
-  // 🔥 Fullscreen automatico su mobile
-  if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-    requestFullscreen();
-  }
-
   let index = 0;
   let score = 0;
 
@@ -256,11 +251,15 @@ function startGame(questions, sessionId, studentId) {
       touch: true
     },
     scale: {
-      mode: Phaser.Scale.FIT,
+      mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH
     },
     scene: { preload, create, update }
   };
+
+  const container = document.getElementById("gameContainer");
+  container.style.width = window.innerWidth + "px";
+  container.style.height = window.innerHeight + "px";
 
   gameInstance = new Phaser.Game(config);
 

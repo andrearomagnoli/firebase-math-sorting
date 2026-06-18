@@ -56,9 +56,16 @@ button.btn {
 ========================================= */
 
 #gameContainer {
-  background: #fff;
-  border-radius: 10px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
   overflow: hidden;
+  background: #fff;
 }
 
 /* =========================================

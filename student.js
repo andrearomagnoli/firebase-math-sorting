@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
 let currentSessionId = null;
 let studentId = null;
 let gameInstance = null;
+let gameFinished = false;
 
 // -------------------------
 // INIZIALIZZAZIONE UI
@@ -59,15 +60,28 @@ function joinSession() {
 function enterSession(sessionId, name) {
   currentSessionId = sessionId;
   studentId = "guest_" + Math.random().toString(36).substring(2, 10);
+  gameFinished = false;
 
+  // Registra lo studente
   db.ref(`sessions/${sessionId}/players/${studentId}`).set({
     name,
-    score: 0
+    score: 0,
+    leftEarly: false
   });
 
-  document.getElementById("joinBtn").style.display = "none";
-  document.getElementById("exitBtn").style.display = "block";
+  // Se chiude il browser → segna "uscito prima"
+  db.ref(`sessions/${sessionId}/players/${studentId}`).onDisconnect().update({
+    leftEarly: true
+  });
 
+  // Nascondi login e pulsante Esci
+  document.getElementById("joinBtn").style.display = "none";
+  document.getElementById("exitBtn").style.display = "none";
+
+  // Mostra solo stato sessione
+  document.getElementById("status").textContent = "In attesa dell’avvio…";
+
+  // Listener sullo stato della sessione
   db.ref(`sessions/${sessionId}/status`).on("value", snap => {
     const status = snap.val();
     document.getElementById("status").textContent = "Stato sessione: " + status;
@@ -80,19 +94,19 @@ function enterSession(sessionId, name) {
         }
 
         const container = document.getElementById("gameContainer");
-
-        // FIX 1: display deve essere "block", non "visible"
         container.style.display = "block";
 
-        // MOBILE SAFE: aspetta due frame prima di creare Phaser
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            console.log("Container size:", container.clientWidth, container.clientHeight);
-            document.body.addEventListener("touchstart", () => {}, { passive: true });
             startGame(questions, sessionId, studentId);
           });
         });
       });
+    }
+
+    if (status === "finished" && !gameFinished) {
+      // Se il docente termina la partita mentre lo studente è dentro
+      endGameForced();
     }
   });
 }
@@ -111,24 +125,18 @@ function loadQuestions(sessionId, callback) {
 // USCITA
 // -------------------------
 function leaveSession() {
+  if (!gameFinished) {
+    console.log("Uscita bloccata durante la partita");
+    return;
+  }
+
   if (currentSessionId && studentId) {
-    // NON cancelliamo il record, segniamo solo che è uscito prima
     db.ref(`sessions/${currentSessionId}/players/${studentId}`).update({
-      leftEarly: true
+      leftEarly: false
     });
   }
 
-  if (gameInstance) {
-    try { gameInstance.destroy(true); } catch(e){}
-    gameInstance = null;
-  }
-
-  document.getElementById("gameContainer").style.display = "none";
-  document.getElementById("joinBtn").style.display = "block";
-  document.getElementById("exitBtn").style.display = "none";
-
-  currentSessionId = null;
-  studentId = null;
+  resetUI();
 }
 
 function resetUI() {
@@ -138,11 +146,14 @@ function resetUI() {
   }
 
   document.getElementById("gameContainer").style.display = "none";
+
+  // Torna alla schermata iniziale
   document.getElementById("joinBtn").style.display = "block";
   document.getElementById("exitBtn").style.display = "none";
 
   currentSessionId = null;
   studentId = null;
+  gameFinished = false;
 }
 
 // -------------------------
@@ -266,6 +277,8 @@ function startGame(questions, sessionId, studentId) {
   }
 
   function endGame() {
+    gameFinished = true;
+
     const finalScore = Math.max(2, Math.floor(2 + 8 * (score / questions.length)));
 
     db.ref(`sessions/${sessionId}/players/${studentId}`).update({
@@ -275,15 +288,19 @@ function startGame(questions, sessionId, studentId) {
 
     alert("Partita terminata. Punteggio: " + finalScore);
 
-    try { gameInstance.destroy(true); } catch(e){}
-    gameInstance = null;
+    resetUI();
+  }
 
-    document.getElementById("gameContainer").style.display = "none";
-    document.getElementById("joinBtn").style.display = "block";
-    document.getElementById("exitBtn").style.display = "none";
+  function endGameForced() {
+    gameFinished = true;
 
-    // opzionale: lo studente può rientrare in un’altra sessione
-    currentSessionId = null;
-    studentId = null;
+    if (gameInstance) {
+      try { gameInstance.destroy(true); } catch(e){}
+      gameInstance = null;
+    }
+
+    alert("La partita è stata terminata dal docente.");
+
+    resetUI();
   }
 }

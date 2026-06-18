@@ -239,7 +239,9 @@ function updateScores(sessionId) {
       snap.forEach(child => {
         const player = child.val();
         const li = document.createElement("li");
-        li.textContent = `${player.name || "(senza nome)"} – ${player.score || 0}`;
+        let label = `${player.name || "(senza nome)"} – ${player.score || 0}`;
+        if (player.leftEarly) label += " (uscito prima)";
+        li.textContent = label;
         ol.appendChild(li);
       });
     }

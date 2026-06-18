@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const createBtn  = document.getElementById("createSessionBtn");
   const deleteBtn  = document.getElementById("deleteSessionBtn");
   const startBtn   = document.getElementById("startSessionBtn");
+  const finishBtn = document.getElementById("finishSessionBtn");
 
   if (loginBtn) {
     loginBtn.addEventListener("touchstart", e => { e.preventDefault(); loginTeacher(); }, { passive: false });
@@ -35,6 +36,11 @@ document.addEventListener("DOMContentLoaded", () => {
   if (startBtn) {
     startBtn.addEventListener("touchstart", e => { e.preventDefault(); startSession(); }, { passive: false });
     startBtn.addEventListener("click", startSession);
+  }
+
+  if (finishBtn) {
+    finishBtn.addEventListener("touchstart", e => { e.preventDefault(); finishSession(); }, { passive: false });
+    finishBtn.addEventListener("click", finishSession);
   }
 });
 
@@ -109,6 +115,16 @@ function startSession() {
   db.ref(`sessions/${sessionId}/status`).set("started");
 }
 
+function finishSession() {
+  const sessionId = document.getElementById("sessionId").value.trim();
+  if (!sessionId) return;
+
+  // 🔥 Stato finale della sessione
+  db.ref(`sessions/${sessionId}/status`).set("finished");
+
+  alert("Partita terminata. Gli studenti non possono più modificare il punteggio.");
+}
+
 // -------------------------
 // CARICA STATO SESSIONE
 // -------------------------
@@ -152,8 +168,15 @@ function loadSessionStatus() {
 
       if (data.status === "waiting") {
         startBox.style.display = "block";
-      } else {
+        document.getElementById("finishSessionBtn").style.display = "none";
+      }
+      else if (data.status === "started") {
         startBox.style.display = "none";
+        document.getElementById("finishSessionBtn").style.display = "block";
+      }
+      else if (data.status === "finished") {
+        startBox.style.display = "none";
+        document.getElementById("finishSessionBtn").style.display = "none";
       }
 
       activeBox.style.display = "block";
@@ -183,10 +206,11 @@ function updatePlayersList(sessionId) {
       snap.forEach(child => {
         const player = child.val();
         const li = document.createElement("li");
-        li.textContent = player.name || "(senza nome)";
+        let label = player.name || "(senza nome)";
         if (player.leftEarly) {
           label += " (uscito prima)";
         }
+        li.textContent = label;
 
         ul.appendChild(li);
       });

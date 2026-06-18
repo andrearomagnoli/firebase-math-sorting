@@ -112,19 +112,24 @@ function loadQuestions(sessionId, callback) {
 // -------------------------
 function leaveSession() {
 
-  // Se la partita è finita, NON cancellare il punteggio
+  if (!currentSessionId || !studentId) {
+    resetUI();
+    return;
+  }
+
+  const playerRef = db.ref(`sessions/${currentSessionId}/players/${studentId}`);
   const statusRef = db.ref(`sessions/${currentSessionId}/status`);
+
   statusRef.once("value").then(snap => {
-    if (snap.val() === "finished") {
-      console.log("Partita finita: leaveSession non rimuove il punteggio.");
-      return;
+    const status = snap.val();
+
+    if (status === "started") {
+      playerRef.update({ leftEarly: true });
+      console.log("Studente uscito prima: leftEarly = true");
     }
 
-    // Comportamento normale durante la partita
-    if (currentSessionId && studentId) {
-      db.ref(`sessions/${currentSessionId}/players/${studentId}`).update({
-        leftEarly: true
-      });
+    if (status === "finished") {
+      console.log("Partita finita: il punteggio rimane intatto");
     }
 
     resetUI();
@@ -268,7 +273,6 @@ function startGame(questions, sessionId, studentId) {
   function endGame() {
     const finalScore = Math.max(2, Math.floor(2 + 8 * (score / questions.length)));
 
-    db.ref(`sessions/${sessionId}/players/${studentId}/score`).set(finalScore);
     db.ref(`sessions/${sessionId}/players/${studentId}`).update({
       score: finalScore,
       leftEarly: false
@@ -276,14 +280,12 @@ function startGame(questions, sessionId, studentId) {
 
     alert("Partita terminata. Punteggio: " + finalScore);
 
-    // Distruggi gioco
     try { gameInstance.destroy(true); } catch(e){}
     gameInstance = null;
 
-    // Nascondi canvas
     document.getElementById("gameContainer").style.display = "none";
 
-    // MOSTRA SCHERMATA DI LOGIN PULITA
+    // Mostra schermata di login pulita
     document.getElementById("joinBtn").style.display = "block";
     document.getElementById("exitBtn").style.display = "none";
   }

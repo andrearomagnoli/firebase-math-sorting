@@ -104,8 +104,23 @@ function deleteSession() {
   const sessionId = document.getElementById("sessionId").value.trim();
   if (!sessionId) return;
 
-  db.ref(`sessions/${sessionId}`).remove();
-  loadSessionStatus();
+  // Elimina completamente la sessione (e quindi anche i quesiti)
+  db.ref(`sessions/${sessionId}`).remove().then(() => {
+
+    // Pulizia UI
+    document.getElementById("sessionStatus").textContent = "Nessuna sessione";
+    document.getElementById("activeSessionBox").style.display = "none";
+    document.getElementById("startSessionBox").style.display = "none";
+    document.getElementById("deleteSessionBtn").style.display = "none";
+
+    // Nascondi info quesiti
+    document.getElementById("questionsInfo").style.display = "none";
+    document.getElementById("deleteExcelBtn").style.display = "none";
+    document.getElementById("excelStatus").textContent = "";
+
+    // Rimuovi listener
+    removeTeacherListeners();
+  });
 }
 
 function startSession() {

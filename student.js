@@ -41,6 +41,15 @@ function initStudent() {
 // JOIN SESSIONE
 // -------------------------
 function joinSession() {
+  // Se lo studente ha già giocato questa sessione → blocco
+  const playedSession = localStorage.getItem("mathSorting_sessionId");
+  const hasPlayed = localStorage.getItem("mathSorting_hasPlayed");
+
+  if (hasPlayed === "true" && playedSession === sessionId) {
+    alert("Hai già partecipato a questa partita. Non puoi rientrare.");
+    return;
+  }
+
   const sessionId = document.getElementById("sessionId").value.trim();
   const name = document.getElementById("displayName").value.trim();
 
@@ -49,18 +58,10 @@ function joinSession() {
     return;
   }
 
-  // Se lo studente ha già partecipato a questa sessione → blocco
-  const savedSession = localStorage.getItem("mathSorting_sessionId");
-  const savedStudent = localStorage.getItem("mathSorting_studentId");
-
-  if (savedSession === sessionId && savedStudent) {
-    alert("Hai già partecipato a questa partita. Non puoi rientrare.");
+  // Studenti senza nome NON devono mai essere aggiunti
+  if (name.trim().length < 1) {
+    alert("Inserisci un cognome valido.");
     return;
-  }
-
-  if (savedSession && savedSession !== sessionId) {
-    localStorage.removeItem("mathSorting_studentId");
-    localStorage.removeItem("mathSorting_sessionId");
   }
 
   db.ref(`sessions/${sessionId}`).once("value").then(snap => {
@@ -77,6 +78,7 @@ function joinSession() {
       return;
     }
 
+    // ✔ Prima dell’inizio → ingresso libero
     enterSession(sessionId, name);
   });
 }
@@ -84,10 +86,6 @@ function joinSession() {
 function enterSession(sessionId, name) {
   currentSessionId = sessionId;
   studentId = "guest_" + Math.random().toString(36).substring(2, 10);
-
-  // Salva l'ID studente nel browser
-  localStorage.setItem("mathSorting_studentId", studentId);
-  localStorage.setItem("mathSorting_sessionId", sessionId);
 
   gameFinished = false;
   gameStarted = false;
@@ -118,6 +116,9 @@ function enterSession(sessionId, name) {
 
     // Quando la partita INIZIA
     if (status === "started") {
+      // Ora la partita è iniziata → blocco rientro futuro
+      localStorage.setItem("mathSorting_sessionId", sessionId);
+      localStorage.setItem("mathSorting_hasPlayed", "true");
 
       gameStarted = true;
 

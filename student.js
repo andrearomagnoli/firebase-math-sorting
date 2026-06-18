@@ -84,6 +84,11 @@ function joinSession() {
 }
 
 function enterSession(sessionId, name) {
+  if (!name || name.trim().length < 1) {
+    alert("Nome non valido.");
+    return;
+  }
+
   currentSessionId = sessionId;
   studentId = "guest_" + Math.random().toString(36).substring(2, 10);
 
@@ -357,6 +362,9 @@ function startGame(questions, sessionId, studentId) {
       score: finalScore,
       leftEarly: false
     });
+
+    localStorage.setItem("mathSorting_sessionId", sessionId);
+    localStorage.setItem("mathSorting_hasPlayed", "true");
 
     alert("Partita terminata. Punteggio: " + finalScore);
 

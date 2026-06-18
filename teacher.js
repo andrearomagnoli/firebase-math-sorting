@@ -208,15 +208,21 @@ function updatePlayersList(sessionId) {
       ul.innerHTML = "";
       snap.forEach(child => {
         const player = child.val();
-        const li = document.createElement("li");
 
-        let label = player.name || "(senza nome)";
+        // Pulizia automatica: se non ha nome → elimina record
+        if (!player.name || player.name.trim().length < 1) {
+          child.ref.remove();
+          return;
+        }
+
+        const li = document.createElement("li");
+        let label = player.name;
+
         if (player.leftEarly) {
           label += " (uscito prima)";
         }
 
         li.textContent = label;
-
         ul.appendChild(li);
       });
     }

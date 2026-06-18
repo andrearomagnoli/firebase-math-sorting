@@ -138,6 +138,9 @@ function leaveSession() {
 
   // PRIMA della partita → USCITA PERMESSA
   if (!gameStarted) {
+    if (currentSessionId && studentId) {
+      db.ref(`sessions/${currentSessionId}/players/${studentId}`).remove();
+    }
     resetUI();
     return;
   }

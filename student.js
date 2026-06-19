@@ -272,17 +272,16 @@ function startGame(questions, sessionId, studentId) {
 
   function create() {
 
-    // Barra di avanzamento (sfondo)
-    progressBar = this.add.rectangle(200, 20, 360, 12, 0xcccccc);
-    progressBar.setOrigin(0.5);
+    // Sfondo
+    progressBar = this.add.graphics();
+    progressBar.fillStyle(0xcccccc, 1);
+    progressBar.fillRect(20, 14, 360, 12);
 
-    // Verde (corretti) — cresce da sinistra
-    progressFillGreen = this.add.rectangle(20, 20, 0, 12, 0x4caf50);
-    progressFillGreen.setOrigin(0, 0.5);
+    // Verde
+    progressGreen = this.add.graphics();
 
-    // Rosso (errori) — cresce da destra
-    progressFillRed = this.add.rectangle(380, 20, 0, 12, 0xff5252);
-    progressFillRed.setOrigin(1, 0.5);
+    // Rosso
+    progressRed = this.add.graphics();
 
     const unique = [...new Set(questions.map(q => q.basket))];
     const w = 400 / unique.length;
@@ -352,24 +351,20 @@ function startGame(questions, sessionId, studentId) {
     if (isCorrect) correctCount++;
     else wrongCount++;
 
-    const scene = gameInstance.scene.scenes[0];
-
     const greenWidth = 360 * (correctCount / totalQuestions);
     const redWidth   = 360 * (wrongCount   / totalQuestions);
 
-    // Verde animata
-    scene.tweens.add({
-      targets: progressFillGreen,
-      width: greenWidth,
-      duration: 200,
-      ease: 'Power2'
-    });
+    // Pulisci e ridisegna
+    progressGreen.clear();
+    progressRed.clear();
 
-    // Rosso aggiornato istantaneamente
-    progressFillRed.width = redWidth;
+    // Verde da sinistra
+    progressGreen.fillStyle(0x4caf50, 1);
+    progressGreen.fillRect(20, 14, greenWidth, 12);
 
-    // La barra rossa cresce verso sinistra in modo perfetto
-    progressFillRed.x = 380 - (redWidth / 2);
+    // Rosso da destra
+    progressRed.fillStyle(0xff5252, 1);
+    progressRed.fillRect(380 - redWidth, 14, redWidth, 12);
   }
 
   // -------------------------

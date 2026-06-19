@@ -62,7 +62,18 @@
   </div>
 
   <!-- CANVAS FULLSCREEN FUORI DAL LAYOUT -->
-  <div id="gameContainer"></div>
+  <div id="gameContainer"
+     style="
+       position: fixed;
+       top: 0; left: 0;
+       width: 100vw;
+       height: 100vh;
+       overflow: hidden;
+       display: none;
+       background: #ffffff;
+       z-index: 1000;
+     ">
+  </div>
 
   <!-- Overlay rotazione -->
   <div id="rotateWarning"

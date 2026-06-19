@@ -110,6 +110,7 @@ function enterSession(sessionId, name) {
 
       document.getElementById("loginCard").style.display = "none";
       document.getElementById("exitBtn").style.display = "none";
+      document.getElementById("title").style.display = "none";
 
       loadQuestions(sessionId, questions => {
         if (!questions.length) {
@@ -184,6 +185,7 @@ function resetUI() {
   document.getElementById("loginCard").style.display = "block";
   document.getElementById("joinBtn").style.display = "block";
   document.getElementById("exitBtn").style.display = "none";
+  document.getElementById("title").style.display = "block";
 
   currentSessionId = null;
   studentId = null;

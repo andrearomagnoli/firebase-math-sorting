@@ -15,7 +15,6 @@ function waitForFirebase(callback) {
 
 document.addEventListener("DOMContentLoaded", () => {
   waitForFirebase(() => {
-    console.log("Firebase pronto – student.js avviato");
     initStudent();
   });
 });
@@ -151,7 +150,6 @@ function leaveSession() {
   }
 
   if (gameStarted && !gameFinished) {
-    console.log("Uscita bloccata durante la partita");
     return;
   }
 
@@ -251,19 +249,32 @@ function startGame(questions, sessionId, studentId) {
         w * i + w / 2,
         580,
         w - 10,
-        40,
+        60,   // bucket più alto
         0xdddddd
       );
       this.physics.add.existing(rect, true);
       rect.basketName = b;
       baskets.push(rect);
 
+      // LABEL con word-wrap + auto-resize
       const label = this.add.text(
-        rect.x - 40,
+        rect.x,
         560,
         b,
-        { fontSize: "14px", color: "#000" }
+        {
+          fontSize: "16px",
+          color: "#000",
+          align: "center",
+          wordWrap: { width: w - 20 }
+        }
       );
+      label.setOrigin(0.5);
+
+      // Riduci font finché entra
+      while (label.height > 50) {
+        let size = parseInt(label.style.fontSize);
+        label.setFontSize((size - 1) + "px");
+      }
 
       rect.label = label;
     });
@@ -369,7 +380,6 @@ function startGame(questions, sessionId, studentId) {
         falling.marker.x = clampedX;
         falling.marker.y = falling.y + falling.height / 2 + 5;
 
-        // TELETRASPORTO per evitare incastri
         if (clampedX !== falling.x) {
           falling.x = clampedX;
           falling.body.setVelocityX(0);

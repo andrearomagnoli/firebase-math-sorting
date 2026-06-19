@@ -37,7 +37,7 @@ function initStudent() {
 }
 
 // -------------------------
-// JOIN SESSIONE (VERSIONE CORRETTA)
+// JOIN SESSIONE
 // -------------------------
 function joinSession() {
   const sessionId = document.getElementById("sessionId").value.trim();
@@ -265,7 +265,6 @@ function startGame(questions, sessionId, studentId) {
   let progressFillRed = null;
 
   let totalQuestions = questions.length;
-  let processed = 0;
   let correctCount = 0;
   let wrongCount = 0;
 
@@ -345,18 +344,18 @@ function startGame(questions, sessionId, studentId) {
     });
   }
 
+  // -------------------------
+  // BARRA DI AVANZAMENTO
+  // -------------------------
   function updateProgress(isCorrect) {
-    processed++;
 
     if (isCorrect) correctCount++;
     else wrongCount++;
 
-    const processedWidth = 360 * (processed / totalQuestions);
-
-    const greenWidth = processedWidth * (correctCount / processed);
-    const redWidth   = processedWidth * (wrongCount   / processed);
-
     const scene = gameInstance.scene.scenes[0];
+
+    const greenWidth = 360 * (correctCount / totalQuestions);
+    const redWidth   = 360 * (wrongCount   / totalQuestions);
 
     // Verde animata
     scene.tweens.add({
@@ -368,11 +367,12 @@ function startGame(questions, sessionId, studentId) {
 
     // Rosso aggiornato istantaneamente
     progressFillRed.width = redWidth;
-
-    // Mantieni la barra rossa ancorata a destra SEMPRE
-    progressFillRed.x = 380;
+    progressFillRed.x = 380; // ancora a destra
   }
 
+  // -------------------------
+  // CREA NUOVO OGGETTO
+  // -------------------------
   function spawn() {
     if (index >= questions.length) return endGame();
 
@@ -477,6 +477,9 @@ function startGame(questions, sessionId, studentId) {
     });
   }
 
+  // -------------------------
+  // UPDATE
+  // -------------------------
   function update() {
     if (falling) {
 
@@ -513,6 +516,9 @@ function startGame(questions, sessionId, studentId) {
     }
   }
 
+  // -------------------------
+  // FINE PARTITA
+  // -------------------------
   function endGame() {
     gameFinished = true;
 

@@ -366,8 +366,11 @@ function startGame(questions, sessionId, studentId) {
       ease: 'Power2'
     });
 
-    // Rosso aggiornato istantaneamente (NO tween!)
+    // Rosso aggiornato istantaneamente
     progressFillRed.width = redWidth;
+
+    // Mantieni la barra rossa ancorata a destra SEMPRE
+    progressFillRed.x = 380;
   }
 
   function spawn() {

@@ -22,9 +22,10 @@
     }
 
     #gameContainer {
-      max-width: 420px;
-      margin-left: auto;
-      margin-right: auto;
+      margin: 0;
+      padding: 0;
+      max-width: none !important;
+      max-height: none !important;
     }
   </style>
 </head>
@@ -57,6 +58,24 @@
     </section>
   </div>
 
+  <div id="rotateWarning"
+     style="
+       position: fixed;
+       top: 0; left: 0;
+       width: 100vw; height: 100vh;
+       background: rgba(0,0,0,0.85);
+       color: white;
+       display: none;
+       justify-content: center;
+       align-items: center;
+       text-align: center;
+       font-size: 22px;
+       padding: 20px;
+       z-index: 9999;
+     ">
+  Ruota il telefono in verticale per giocare
+</div>
+
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -65,5 +84,34 @@
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+  <script>
+    function checkOrientation() {
+      const warning = document.getElementById("rotateWarning");
+      const gameContainer = document.getElementById("gameContainer");
+
+      // Se lo schermo è più largo che alto → orizzontale
+      if (window.innerWidth > window.innerHeight) {
+        warning.style.display = "flex";
+
+        // Nascondi il gioco
+        if (gameContainer) {
+          gameContainer.style.visibility = "hidden";
+          gameContainer.style.pointerEvents = "none";
+        }
+      } else {
+        warning.style.display = "none";
+
+        if (gameContainer) {
+          gameContainer.style.visibility = "visible";
+          gameContainer.style.pointerEvents = "auto";
+        }
+      }
+    }
+
+    // Controlli automatici
+    window.addEventListener("resize", checkOrientation);
+    window.addEventListener("orientationchange", checkOrientation);
+    document.addEventListener("DOMContentLoaded", checkOrientation);
+  </script>
 </body>
 </html>

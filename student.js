@@ -273,19 +273,17 @@ function startGame(questions, sessionId, studentId) {
 
   function create() {
 
-    // Barra di avanzamento (sfondo)
+    // Sfondo
     progressBar = this.add.rectangle(200, 20, 360, 12, 0xcccccc);
     progressBar.setOrigin(0.5);
 
-    // Verde (corretti)
+    // Verde (corretti) — cresce da sinistra
     progressFillGreen = this.add.rectangle(20, 20, 0, 12, 0x4caf50);
     progressFillGreen.setOrigin(0, 0.5);
 
-    // Rosso (errori)
-    progressFillRed = this.add.rectangle(20, 20, 0, 12, 0xff5252);
-    progressFillRed.setOrigin(0, 0.5);
-    progressFillRed.setDepth(5);
-    progressFillGreen.setDepth(6);
+    // Rosso (errori) — cresce da destra
+    progressFillRed = this.add.rectangle(380, 20, 0, 12, 0xff5252);
+    progressFillRed.setOrigin(1, 0.5);
 
     const unique = [...new Set(questions.map(q => q.basket))];
     const w = 400 / unique.length;
@@ -348,7 +346,7 @@ function startGame(questions, sessionId, studentId) {
   }
 
   function updateProgress(isCorrect) {
-    processed++;
+   processed++;
 
     if (isCorrect) correctCount++;
     else wrongCount++;
@@ -358,6 +356,7 @@ function startGame(questions, sessionId, studentId) {
 
     const scene = gameInstance.scene.scenes[0];
 
+    // Verde da sinistra
     scene.tweens.add({
       targets: progressFillGreen,
       width: greenWidth,
@@ -365,6 +364,7 @@ function startGame(questions, sessionId, studentId) {
       ease: 'Power2'
     });
 
+    // Rosso da destra
     scene.tweens.add({
       targets: progressFillRed,
       width: redWidth,
@@ -424,12 +424,15 @@ function startGame(questions, sessionId, studentId) {
     falling.marker = marker;
 
     baskets.forEach(b => {
-      scene.physics.add.overlap(falling, b, () => {
+      scene.physics.add.overlap(falling.marker, b, () => {
+
         if (!falling.active) return;
         falling.active = false;
+        falling.body.checkCollision.none = true; // blocca altri overlap
 
-        if (b.basketName === target) {
+        const isCorrect = (b.basketName === target);
 
+        if (isCorrect) {
           score++;
           updateProgress(true);
 
@@ -444,7 +447,6 @@ function startGame(questions, sessionId, studentId) {
           });
 
         } else {
-
           updateProgress(false);
 
           // ANIMAZIONE SBAGLIATO (shake)
@@ -490,6 +492,7 @@ function startGame(questions, sessionId, studentId) {
 
         if (!falling.active) return;
         falling.active = false;
+        falling.body.checkCollision.none = true;
 
         updateProgress(false);
 

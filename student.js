@@ -37,7 +37,7 @@ function initStudent() {
 }
 
 // -------------------------
-// JOIN SESSIONE
+// JOIN SESSIONE (VERSIONE CORRETTA)
 // -------------------------
 function joinSession() {
   const sessionId = document.getElementById("sessionId").value.trim();
@@ -51,10 +51,8 @@ function joinSession() {
   const playedSession = localStorage.getItem("mathSorting_sessionId");
   const hasPlayed = localStorage.getItem("mathSorting_hasPlayed");
 
-  // 1) Controllo su Firebase lo stato della sessione
   db.ref(`sessions/${sessionId}`).once("value").then(snap => {
 
-    // La sessione NON esiste
     if (!snap.exists()) {
       alert("La sessione non esiste.");
       return;
@@ -63,17 +61,13 @@ function joinSession() {
     const data = snap.val();
     const status = data.status || "waiting";
 
-    // 2) Se lo studente risulta aver già giocato questa sessione
     if (hasPlayed === "true" && playedSession === sessionId) {
 
-      // Caso A: la sessione è ancora quella vecchia (già finita) → blocco
       if (status === "finished") {
         alert("Hai già partecipato a questa partita.");
         return;
       }
 
-      // Caso B: il docente ha ricreato la lobby con lo stesso codice
-      // (status tipicamente "waiting") → resetto localStorage e permetto l'ingresso
       if (status === "waiting") {
         localStorage.removeItem("mathSorting_sessionId");
         localStorage.removeItem("mathSorting_hasPlayed");
@@ -81,24 +75,24 @@ function joinSession() {
         return;
       }
 
-      // Se per qualche motivo è "started", mantengo il blocco conservativo
       if (status === "started") {
         alert("La partita è già in corso e hai già partecipato.");
         return;
       }
     }
 
-    // 3) Controllo normale per chi non ha ancora giocato
     if (status === "started" || status === "finished") {
       alert("La partita è già iniziata o terminata.");
       return;
     }
 
-    // 4) Tutto ok → entro in sessione
     enterSession(sessionId, name);
   });
 }
 
+// -------------------------
+// ENTRA IN SESSIONE
+// -------------------------
 function enterSession(sessionId, name) {
 
   currentSessionId = sessionId;
@@ -236,10 +230,12 @@ function startGame(questions, sessionId, studentId) {
     gameInstance = null;
   }
 
+  // Shuffle dei quesiti
+  questions = shuffle(questions);
+
   let index = 0;
   let score = 0;
 
-  // 🎯 RISOLUZIONE LOGICA FISSA
   const config = {
     type: Phaser.AUTO,
     width: 400,
@@ -263,9 +259,22 @@ function startGame(questions, sessionId, studentId) {
   let baskets = [];
   let target = null;
 
+  // Progress bar
+  let progressBar = null;
+  let progressFill = null;
+  let totalQuestions = questions.length;
+  let processed = 0;
+
   function preload() {}
 
   function create() {
+
+    // Barra di avanzamento
+    progressBar = this.add.rectangle(200, 20, 360, 12, 0xcccccc);
+    progressBar.setOrigin(0.5);
+
+    progressFill = this.add.rectangle(20, 20, 0, 12, 0x4caf50);
+    progressFill.setOrigin(0, 0.5);
 
     const unique = [...new Set(questions.map(q => q.basket))];
     const w = 400 / unique.length;
@@ -275,14 +284,13 @@ function startGame(questions, sessionId, studentId) {
         w * i + w / 2,
         580,
         w - 10,
-        60,   // bucket più alto
+        60,
         0xdddddd
       );
       this.physics.add.existing(rect, true);
       rect.basketName = b;
       baskets.push(rect);
 
-      // LABEL con word-wrap + auto-resize
       const label = this.add.text(
         rect.x,
         560,
@@ -296,7 +304,6 @@ function startGame(questions, sessionId, studentId) {
       );
       label.setOrigin(0.5);
 
-      // Riduci font finché entra
       while (label.height > 50) {
         let size = parseInt(label.style.fontSize);
         label.setFontSize((size - 1) + "px");
@@ -307,9 +314,10 @@ function startGame(questions, sessionId, studentId) {
 
     spawn.call(this);
 
-    // MOVIMENTO LATERALE
     this.input.on("pointerdown", p => {
       if (!falling || !falling.body) return;
+
+      falling.wasTouched = true;
 
       const lateralSpeed = 200;
 
@@ -325,6 +333,19 @@ function startGame(questions, sessionId, studentId) {
     this.input.on("pointerup", () => {
       if (!falling || !falling.body) return;
       falling.body.setVelocityX(0);
+    });
+  }
+
+  function updateProgress() {
+    processed++;
+    const ratio = processed / totalQuestions;
+    const newWidth = 360 * ratio;
+
+    gameInstance.scene.scenes[0].tweens.add({
+      targets: progressFill,
+      width: newWidth,
+      duration: 200,
+      ease: 'Power2'
     });
   }
 
@@ -357,7 +378,8 @@ function startGame(questions, sessionId, studentId) {
     falling.body.setBounce(0);
     falling.body.setCollideWorldBounds(false);
 
-    // VELOCITÀ DI CADUTA COSTANTE (6 secondi)
+    falling.wasTouched = false;
+
     const spawnY = 50;
     const basketY = 580;
     const fallDistance = basketY - spawnY;
@@ -368,7 +390,6 @@ function startGame(questions, sessionId, studentId) {
     falling.body.setVelocityY(fallSpeed);
     falling.body.setVelocityX(0);
 
-    // MARKER
     const marker = scene.add.circle(
       falling.x,
       falling.y + falling.height / 2 + 5,
@@ -381,8 +402,11 @@ function startGame(questions, sessionId, studentId) {
     baskets.forEach(b => {
       scene.physics.add.overlap(falling, b, () => {
         if (!falling.active) return;
+        falling.active = false;
 
         if (b.basketName === target) score++;
+
+        updateProgress();
 
         if (falling.marker) falling.marker.destroy();
         falling.destroy();
@@ -413,6 +437,12 @@ function startGame(questions, sessionId, studentId) {
       }
 
       if (falling.y > 620) {
+
+        if (!falling.active) return;
+        falling.active = false;
+
+        updateProgress();
+
         if (falling.marker) falling.marker.destroy();
         falling.destroy();
         index++;
@@ -438,4 +468,15 @@ function startGame(questions, sessionId, studentId) {
 
     resetUI();
   }
+}
+
+// -------------------------
+// SHUFFLE
+// -------------------------
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
 }

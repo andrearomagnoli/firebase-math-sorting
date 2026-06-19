@@ -216,18 +216,6 @@ function endGameForced() {
 // -------------------------
 // GIOCO PHASER
 // -------------------------
-function requestFullscreen() {
-  const elem = document.documentElement;
-
-  if (elem.requestFullscreen) {
-    elem.requestFullscreen();
-  } else if (elem.webkitRequestFullscreen) {
-    elem.webkitRequestFullscreen();
-  } else if (elem.msRequestFullscreen) {
-    elem.msRequestFullscreen();
-  }
-}
-
 function startGame(questions, sessionId, studentId) {
 
   if (gameInstance) {
@@ -240,8 +228,8 @@ function startGame(questions, sessionId, studentId) {
 
   const config = {
     type: Phaser.AUTO,
-    width: 400,
-    height: 600,
+    width: window.innerWidth,
+    height: window.innerHeight,
     parent: "gameContainer",
     backgroundColor: "#ffffff",
     physics: {
@@ -259,28 +247,28 @@ function startGame(questions, sessionId, studentId) {
     scene: { preload, create, update }
   };
 
-  const container = document.getElementById("gameContainer");
-  container.style.width = window.innerWidth + "px";
-  container.style.height = window.innerHeight + "px";
-
   gameInstance = new Phaser.Game(config);
 
   let falling = null;
   let baskets = [];
   let target = null;
-  let blockedByClamp = false;
 
   function preload() {}
 
   function create() {
 
+    // Resize dinamico
+    window.addEventListener("resize", () => {
+      this.scale.resize(window.innerWidth, window.innerHeight);
+    });
+
     const unique = [...new Set(questions.map(q => q.basket))];
-    const w = 400 / unique.length;
+    const w = this.cameras.main.width / unique.length;
 
     unique.forEach((b, i) => {
       const rect = this.add.rectangle(
         w * i + w / 2,
-        580,
+        this.cameras.main.height - 40,
         w - 10,
         40,
         0xdddddd
@@ -289,7 +277,7 @@ function startGame(questions, sessionId, studentId) {
       rect.basketName = b;
       baskets.push(rect);
 
-      this.add.text(rect.x - 40, 560, b, {
+      this.add.text(rect.x - 40, this.cameras.main.height - 60, b, {
         fontSize: "14px",
         color: "#000"
       });
@@ -297,12 +285,9 @@ function startGame(questions, sessionId, studentId) {
 
     spawn.call(this);
 
-    // MOVIMENTO LATERALE SENZA DIAGONALE
+    // MOVIMENTO LATERALE
     this.input.on("pointerdown", p => {
       if (!falling || !falling.body) return;
-
-      // Sblocca se era bloccato dal clamp
-      blockedByClamp = false;
 
       const lateralSpeed = 200;
 
@@ -334,12 +319,17 @@ function startGame(questions, sessionId, studentId) {
 
     const scene = this;
 
-    falling = scene.add.text(200, 50, q.text, {
-      fontSize: "20px",
-      color: "#000",
-      align: "center",
-      wordWrap: { width: 360 }
-    });
+    falling = scene.add.text(
+      this.cameras.main.width / 2,
+      50,
+      q.text,
+      {
+        fontSize: "20px",
+        color: "#000",
+        align: "center",
+        wordWrap: { width: this.cameras.main.width - 40 }
+      }
+    );
     falling.setOrigin(0.5);
 
     scene.physics.add.existing(falling);
@@ -352,7 +342,7 @@ function startGame(questions, sessionId, studentId) {
 
     // VELOCITÀ DI CADUTA COSTANTE (6 secondi)
     const spawnY = 50;
-    const basketY = 580;
+    const basketY = this.cameras.main.height - 40;
     const fallDistance = basketY - spawnY;
     const fallTime = 6000;
     const fallSpeed = fallDistance / (fallTime / 1000);
@@ -361,7 +351,7 @@ function startGame(questions, sessionId, studentId) {
     falling.body.setVelocityY(fallSpeed);
     falling.body.setVelocityX(0);
 
-    // MARKER SOTTO L'OGGETTO
+    // MARKER
     const marker = scene.add.circle(
       falling.x,
       falling.y + falling.height / 2 + 5,
@@ -396,23 +386,17 @@ function startGame(questions, sessionId, studentId) {
           this.cameras.main.width - 5
         );
 
-        // Aggiorna marker
         falling.marker.x = clampedX;
         falling.marker.y = falling.y + falling.height / 2 + 5;
 
-        // Se il puntino è clamped → teletrasporta anche l'oggetto
+        // TELETRASPORTO per evitare incastri
         if (clampedX !== falling.x) {
-
-          // TELETRASPORTO: evita l'incastro
           falling.x = clampedX;
-
-          // Ferma la velocità laterale
           falling.body.setVelocityX(0);
         }
       }
 
-      // Oggetto uscito dallo schermo
-      if (falling.y > 620) {
+      if (falling.y > this.cameras.main.height + 20) {
         if (falling.marker) falling.marker.destroy();
         falling.destroy();
         index++;

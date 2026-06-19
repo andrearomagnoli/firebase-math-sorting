@@ -51,40 +51,50 @@ function joinSession() {
   const playedSession = localStorage.getItem("mathSorting_sessionId");
   const hasPlayed = localStorage.getItem("mathSorting_hasPlayed");
 
-  // Se lo studente ha già giocato questa sessione, controlliamo se esiste ancora
-  if (hasPlayed === "true" && playedSession === sessionId) {
-
-    db.ref(`sessions/${sessionId}`).once("value").then(snap => {
-
-      // Se la sessione NON esiste più → reset localStorage e permetti l'ingresso
-      if (!snap.exists()) {
-        localStorage.removeItem("mathSorting_sessionId");
-        localStorage.removeItem("mathSorting_hasPlayed");
-        enterSession(sessionId, name);
-        return;
-      }
-
-      // Se la sessione esiste ancora → blocco
-      alert("Hai già partecipato a questa partita.");
-      return;
-    });
-
-    return; // evita doppio enterSession
-  }
-
+  // 1) Controllo su Firebase lo stato della sessione
   db.ref(`sessions/${sessionId}`).once("value").then(snap => {
+
+    // La sessione NON esiste
     if (!snap.exists()) {
       alert("La sessione non esiste.");
       return;
     }
 
     const data = snap.val();
+    const status = data.status || "waiting";
 
-    if (data.status === "started" || data.status === "finished") {
+    // 2) Se lo studente risulta aver già giocato questa sessione
+    if (hasPlayed === "true" && playedSession === sessionId) {
+
+      // Caso A: la sessione è ancora quella vecchia (già finita) → blocco
+      if (status === "finished") {
+        alert("Hai già partecipato a questa partita.");
+        return;
+      }
+
+      // Caso B: il docente ha ricreato la lobby con lo stesso codice
+      // (status tipicamente "waiting") → resetto localStorage e permetto l'ingresso
+      if (status === "waiting") {
+        localStorage.removeItem("mathSorting_sessionId");
+        localStorage.removeItem("mathSorting_hasPlayed");
+        enterSession(sessionId, name);
+        return;
+      }
+
+      // Se per qualche motivo è "started", mantengo il blocco conservativo
+      if (status === "started") {
+        alert("La partita è già in corso e hai già partecipato.");
+        return;
+      }
+    }
+
+    // 3) Controllo normale per chi non ha ancora giocato
+    if (status === "started" || status === "finished") {
       alert("La partita è già iniziata o terminata.");
       return;
     }
 
+    // 4) Tutto ok → entro in sessione
     enterSession(sessionId, name);
   });
 }

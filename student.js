@@ -367,7 +367,8 @@ function startGame(questions, sessionId, studentId) {
 
     // Rosso aggiornato istantaneamente
     progressFillRed.width = redWidth;
-    progressFillRed.x = 380; // ancora a destra
+
+    progressFillRed.x = 380;
   }
 
   // -------------------------

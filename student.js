@@ -351,12 +351,14 @@ function startGame(questions, sessionId, studentId) {
     if (isCorrect) correctCount++;
     else wrongCount++;
 
-    const greenWidth = 360 * (correctCount / totalQuestions);
-    const redWidth   = 360 * (wrongCount   / totalQuestions);
+    const processedWidth = 360 * (processed / totalQuestions);
+
+    const greenWidth = processedWidth * (correctCount / processed);
+    const redWidth   = processedWidth * (wrongCount   / processed);
 
     const scene = gameInstance.scene.scenes[0];
 
-    // Verde da sinistra
+    // Verde animata
     scene.tweens.add({
       targets: progressFillGreen,
       width: greenWidth,
@@ -364,13 +366,8 @@ function startGame(questions, sessionId, studentId) {
       ease: 'Power2'
     });
 
-    // Rosso da destra
-    scene.tweens.add({
-      targets: progressFillRed,
-      width: redWidth,
-      duration: 200,
-      ease: 'Power2'
-    });
+    // Rosso aggiornato istantaneamente (NO tween!)
+    progressFillRed.width = redWidth;
   }
 
   function spawn() {

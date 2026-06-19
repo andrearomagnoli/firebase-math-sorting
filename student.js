@@ -529,9 +529,10 @@ function startGame(questions, sessionId, studentId) {
     localStorage.setItem("mathSorting_sessionId", sessionId);
     localStorage.setItem("mathSorting_hasPlayed", "true");
 
-    alert("Partita terminata. Punteggio: " + finalScore);
-
-    resetUI();
+    setTimeout(() => {
+      alert("Partita terminata. Punteggio: " + finalScore);
+      resetUI();
+    }, 300);
   }
 }
 

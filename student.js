@@ -261,20 +261,31 @@ function startGame(questions, sessionId, studentId) {
 
   // Progress bar
   let progressBar = null;
-  let progressFill = null;
+  let progressFillGreen = null;
+  let progressFillRed = null;
+
   let totalQuestions = questions.length;
   let processed = 0;
+  let correctCount = 0;
+  let wrongCount = 0;
 
   function preload() {}
 
   function create() {
 
-    // Barra di avanzamento
+    // Barra di avanzamento (sfondo)
     progressBar = this.add.rectangle(200, 20, 360, 12, 0xcccccc);
     progressBar.setOrigin(0.5);
 
-    progressFill = this.add.rectangle(20, 20, 0, 12, 0x4caf50);
-    progressFill.setOrigin(0, 0.5);
+    // Verde (corretti)
+    progressFillGreen = this.add.rectangle(20, 20, 0, 12, 0x4caf50);
+    progressFillGreen.setOrigin(0, 0.5);
+
+    // Rosso (errori)
+    progressFillRed = this.add.rectangle(20, 20, 0, 12, 0xff5252);
+    progressFillRed.setOrigin(0, 0.5);
+    progressFillRed.setDepth(5);
+    progressFillGreen.setDepth(6);
 
     const unique = [...new Set(questions.map(q => q.basket))];
     const w = 400 / unique.length;
@@ -336,14 +347,27 @@ function startGame(questions, sessionId, studentId) {
     });
   }
 
-  function updateProgress() {
+  function updateProgress(isCorrect) {
     processed++;
-    const ratio = processed / totalQuestions;
-    const newWidth = 360 * ratio;
 
-    gameInstance.scene.scenes[0].tweens.add({
-      targets: progressFill,
-      width: newWidth,
+    if (isCorrect) correctCount++;
+    else wrongCount++;
+
+    const greenWidth = 360 * (correctCount / totalQuestions);
+    const redWidth   = 360 * (wrongCount   / totalQuestions);
+
+    const scene = gameInstance.scene.scenes[0];
+
+    scene.tweens.add({
+      targets: progressFillGreen,
+      width: greenWidth,
+      duration: 200,
+      ease: 'Power2'
+    });
+
+    scene.tweens.add({
+      targets: progressFillRed,
+      width: redWidth,
       duration: 200,
       ease: 'Power2'
     });
@@ -404,9 +428,35 @@ function startGame(questions, sessionId, studentId) {
         if (!falling.active) return;
         falling.active = false;
 
-        if (b.basketName === target) score++;
+        if (b.basketName === target) {
 
-        updateProgress();
+          score++;
+          updateProgress(true);
+
+          // ANIMAZIONE CORRETTO
+          scene.tweens.add({
+            targets: b,
+            scaleX: 1.15,
+            scaleY: 1.15,
+            yoyo: true,
+            duration: 150,
+            ease: 'Power2'
+          });
+
+        } else {
+
+          updateProgress(false);
+
+          // ANIMAZIONE SBAGLIATO (shake)
+          scene.tweens.add({
+            targets: b,
+            x: b.x + 8,
+            yoyo: true,
+            repeat: 2,
+            duration: 60,
+            ease: 'Power2'
+          });
+        }
 
         if (falling.marker) falling.marker.destroy();
         falling.destroy();
@@ -441,7 +491,7 @@ function startGame(questions, sessionId, studentId) {
         if (!falling.active) return;
         falling.active = false;
 
-        updateProgress();
+        updateProgress(false);
 
         if (falling.marker) falling.marker.destroy();
         falling.destroy();

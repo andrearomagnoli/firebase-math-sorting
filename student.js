@@ -368,7 +368,7 @@ function startGame(questions, sessionId, studentId) {
     // Rosso aggiornato istantaneamente
     progressFillRed.width = redWidth;
 
-    // la barra rossa cresce verso sinistra
+    // La barra rossa cresce verso sinistra in modo perfetto
     progressFillRed.x = 380 - (redWidth / 2);
   }
 

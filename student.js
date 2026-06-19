@@ -51,9 +51,25 @@ function joinSession() {
   const playedSession = localStorage.getItem("mathSorting_sessionId");
   const hasPlayed = localStorage.getItem("mathSorting_hasPlayed");
 
+  // Se lo studente ha già giocato questa sessione, controlliamo se esiste ancora
   if (hasPlayed === "true" && playedSession === sessionId) {
-    alert("Hai già partecipato a questa partita.");
-    return;
+
+    db.ref(`sessions/${sessionId}`).once("value").then(snap => {
+
+      // Se la sessione NON esiste più → reset localStorage e permetti l'ingresso
+      if (!snap.exists()) {
+        localStorage.removeItem("mathSorting_sessionId");
+        localStorage.removeItem("mathSorting_hasPlayed");
+        enterSession(sessionId, name);
+        return;
+      }
+
+      // Se la sessione esiste ancora → blocco
+      alert("Hai già partecipato a questa partita.");
+      return;
+    });
+
+    return; // evita doppio enterSession
   }
 
   db.ref(`sessions/${sessionId}`).once("value").then(snap => {

@@ -1,5 +1,5 @@
 // student.js
-// NON dichiarare db o auth qui. Arrivano da firebase-config.js.
+// NON dichiarare db o auth qui. Arrivano da firebase-config-student.js.
 
 // Aspetta Firebase prima di partire
 function waitForFirebase(callback) {
@@ -45,12 +45,7 @@ function joinSession() {
   const name = document.getElementById("displayName").value.trim();
 
   if (!sessionId || !name) {
-    alert("Inserisci codice sessione e cognome.");
-    return;
-  }
-
-  if (name.trim().length < 1) {
-    alert("Inserisci un cognome valido.");
+    alert("Inserisci codice partita e cognome.");
     return;
   }
 
@@ -58,7 +53,7 @@ function joinSession() {
   const hasPlayed = localStorage.getItem("mathSorting_hasPlayed");
 
   if (hasPlayed === "true" && playedSession === sessionId) {
-    alert("Hai già partecipato a questa partita. Non puoi rientrare.");
+    alert("Hai già partecipato a questa partita.");
     return;
   }
 
@@ -71,7 +66,7 @@ function joinSession() {
     const data = snap.val();
 
     if (data.status === "started" || data.status === "finished") {
-      alert("Non è più possibile entrare: la partita è già iniziata o terminata.");
+      alert("La partita è già iniziata o terminata.");
       return;
     }
 
@@ -80,8 +75,6 @@ function joinSession() {
 }
 
 function enterSession(sessionId, name) {
-
-  if (!name || name.trim().length < 1) return;
 
   currentSessionId = sessionId;
   studentId = "guest_" + Math.random().toString(36).substring(2, 10);
@@ -111,7 +104,6 @@ function enterSession(sessionId, name) {
       document.getElementById("loginCard").style.display = "none";
       document.getElementById("exitBtn").style.display = "none";
 
-      // Nascondi titolo
       const titleEl = document.getElementById("title");
       if (titleEl) titleEl.style.display = "none";
 
@@ -121,13 +113,10 @@ function enterSession(sessionId, name) {
           return;
         }
 
-        const container = document.getElementById("gameContainer");
-        container.style.display = "block";
+        document.getElementById("gameContainer").style.display = "block";
 
         requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            startGame(questions, sessionId, studentId);
-          });
+          startGame(questions, sessionId, studentId);
         });
       });
     }
@@ -226,22 +215,19 @@ function startGame(questions, sessionId, studentId) {
   let index = 0;
   let score = 0;
 
+  // 🎯 RISOLUZIONE LOGICA FISSA
   const config = {
     type: Phaser.AUTO,
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: 400,
+    height: 600,
     parent: "gameContainer",
     backgroundColor: "#ffffff",
     physics: {
       default: "arcade",
       arcade: { gravity: { y: 0 }, debug: false }
     },
-    input: {
-      activePointers: 3,
-      touch: true
-    },
     scale: {
-      mode: Phaser.Scale.RESIZE,
+      mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
     },
     scene: { preload, create, update }
@@ -253,44 +239,17 @@ function startGame(questions, sessionId, studentId) {
   let baskets = [];
   let target = null;
 
-  // -------------------------
-  // FUNZIONE DI RIDIMENSIONAMENTO CESTE
-  // -------------------------
-  function resizeBaskets(scene) {
-    const unique = [...new Set(questions.map(q => q.basket))];
-    const w = scene.cameras.main.width / unique.length;
-
-    baskets.forEach((b, i) => {
-      b.width = w - 10;
-      b.x = w * i + w / 2;
-      b.y = scene.cameras.main.height - 40;
-
-      b.body.updateFromGameObject();
-
-      if (b.label) {
-        b.label.x = b.x - 40;
-        b.label.y = scene.cameras.main.height - 60;
-      }
-    });
-  }
-
   function preload() {}
 
   function create() {
 
-    // Resize dinamico
-    window.addEventListener("resize", () => {
-      this.scale.resize(window.innerWidth, window.innerHeight);
-      resizeBaskets(this);
-    });
-
     const unique = [...new Set(questions.map(q => q.basket))];
-    const w = this.cameras.main.width / unique.length;
+    const w = 400 / unique.length;
 
     unique.forEach((b, i) => {
       const rect = this.add.rectangle(
         w * i + w / 2,
-        this.cameras.main.height - 40,
+        580,
         w - 10,
         40,
         0xdddddd
@@ -301,7 +260,7 @@ function startGame(questions, sessionId, studentId) {
 
       const label = this.add.text(
         rect.x - 40,
-        this.cameras.main.height - 60,
+        560,
         b,
         { fontSize: "14px", color: "#000" }
       );
@@ -317,7 +276,7 @@ function startGame(questions, sessionId, studentId) {
 
       const lateralSpeed = 200;
 
-      if (p.x < this.cameras.main.width / 2) {
+      if (p.x < 200) {
         falling.body.setVelocityX(-lateralSpeed);
       } else {
         falling.body.setVelocityX(lateralSpeed);
@@ -327,11 +286,6 @@ function startGame(questions, sessionId, studentId) {
     });
 
     this.input.on("pointerup", () => {
-      if (!falling || !falling.body) return;
-      falling.body.setVelocityX(0);
-    });
-
-    this.input.on("pointerout", () => {
       if (!falling || !falling.body) return;
       falling.body.setVelocityX(0);
     });
@@ -346,14 +300,14 @@ function startGame(questions, sessionId, studentId) {
     const scene = this;
 
     falling = scene.add.text(
-      this.cameras.main.width / 2,
+      200,
       50,
       q.text,
       {
         fontSize: "20px",
         color: "#000",
         align: "center",
-        wordWrap: { width: this.cameras.main.width - 40 }
+        wordWrap: { width: 360 }
       }
     );
     falling.setOrigin(0.5);
@@ -368,7 +322,7 @@ function startGame(questions, sessionId, studentId) {
 
     // VELOCITÀ DI CADUTA COSTANTE (6 secondi)
     const spawnY = 50;
-    const basketY = this.cameras.main.height - 40;
+    const basketY = 580;
     const fallDistance = basketY - spawnY;
     const fallTime = 6000;
     const fallSpeed = fallDistance / (fallTime / 1000);
@@ -409,7 +363,7 @@ function startGame(questions, sessionId, studentId) {
         const clampedX = Phaser.Math.Clamp(
           falling.x,
           5,
-          this.cameras.main.width - 5
+          395
         );
 
         falling.marker.x = clampedX;
@@ -422,7 +376,7 @@ function startGame(questions, sessionId, studentId) {
         }
       }
 
-      if (falling.y > this.cameras.main.height + 20) {
+      if (falling.y > 620) {
         if (falling.marker) falling.marker.destroy();
         falling.destroy();
         index++;

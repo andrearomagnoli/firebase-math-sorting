@@ -273,7 +273,7 @@ function startGame(questions, sessionId, studentId) {
 
   function create() {
 
-    // Sfondo
+    // Barra di avanzamento (sfondo)
     progressBar = this.add.rectangle(200, 20, 360, 12, 0xcccccc);
     progressBar.setOrigin(0.5);
 
@@ -346,7 +346,7 @@ function startGame(questions, sessionId, studentId) {
   }
 
   function updateProgress(isCorrect) {
-   processed++;
+    processed++;
 
     if (isCorrect) correctCount++;
     else wrongCount++;
@@ -414,6 +414,7 @@ function startGame(questions, sessionId, studentId) {
     falling.body.setVelocityY(fallSpeed);
     falling.body.setVelocityX(0);
 
+    // MARKER (puntino) con fisica
     const marker = scene.add.circle(
       falling.x,
       falling.y + falling.height / 2 + 5,
@@ -423,12 +424,20 @@ function startGame(questions, sessionId, studentId) {
     marker.setDepth(10);
     falling.marker = marker;
 
+    scene.physics.add.existing(marker);
+    marker.body.setAllowGravity(false);
+    marker.body.setImmovable(true);
+    marker.body.setCircle(4);
+    marker.body.setOffset(-4, -4);
+
     baskets.forEach(b => {
       scene.physics.add.overlap(falling.marker, b, () => {
 
         if (!falling.active) return;
         falling.active = false;
-        falling.body.checkCollision.none = true; // blocca altri overlap
+
+        falling.body.checkCollision.none = true;
+        falling.marker.body.checkCollision.none = true;
 
         const isCorrect = (b.basketName === target);
 
@@ -460,7 +469,7 @@ function startGame(questions, sessionId, studentId) {
           });
         }
 
-        if (falling.marker) falling.marker.destroy();
+        falling.marker.destroy();
         falling.destroy();
         index++;
         spawn.call(scene);

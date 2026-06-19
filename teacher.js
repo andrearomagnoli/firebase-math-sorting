@@ -97,6 +97,8 @@ function createSession() {
     players: {}
   });
 
+  document.getElementById("createSessionBox").style.display = "none";
+
   loadSessionStatus();
 }
 
@@ -112,6 +114,8 @@ function deleteSession() {
     document.getElementById("activeSessionBox").style.display = "none";
     document.getElementById("startSessionBox").style.display = "none";
     document.getElementById("deleteSessionBtn").style.display = "none";
+
+    document.getElementById("createSessionBox").style.display = "block";
 
     // Nascondi info quesiti
     document.getElementById("questionsInfo").style.display = "none";
@@ -172,6 +176,9 @@ function loadSessionStatus() {
         activeBox.style.display = "none";
         startBox.style.display  = "none";
         deleteBtn.style.display = "none";
+
+        document.getElementById("createSessionBox").style.display = "block";
+
         return;
       }
 
@@ -180,6 +187,8 @@ function loadSessionStatus() {
       // Sessione esistente
       statusBox.textContent   = "Sessione attiva";
       deleteBtn.style.display = "block";
+
+      document.getElementById("createSessionBox").style.display = "none";
 
       const startBtn  = document.getElementById("startSessionBtn");
       const finishBtn = document.getElementById("finishSessionBtn");

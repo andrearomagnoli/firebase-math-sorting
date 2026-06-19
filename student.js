@@ -110,7 +110,10 @@ function enterSession(sessionId, name) {
 
       document.getElementById("loginCard").style.display = "none";
       document.getElementById("exitBtn").style.display = "none";
-      document.getElementById("title").style.display = "none";
+
+      // Nascondi titolo
+      const titleEl = document.getElementById("pageTitle");
+      if (titleEl) titleEl.style.display = "none";
 
       loadQuestions(sessionId, questions => {
         if (!questions.length) {
@@ -181,11 +184,13 @@ function resetUI() {
     gameInstance = null;
   }
 
+  const titleEl = document.getElementById("pageTitle");
+  if (titleEl) titleEl.style.display = "block";
+
   document.getElementById("gameContainer").style.display = "none";
   document.getElementById("loginCard").style.display = "block";
   document.getElementById("joinBtn").style.display = "block";
   document.getElementById("exitBtn").style.display = "none";
-  document.getElementById("title").style.display = "block";
 
   currentSessionId = null;
   studentId = null;
@@ -241,7 +246,7 @@ function startGame(questions, sessionId, studentId) {
     backgroundColor: "#ffffff",
     physics: {
       default: "arcade",
-      arcade: { gravity: { y: 0 }, debug: false }   // ← GRAVITÀ DISATTIVATA
+      arcade: { gravity: { y: 0 }, debug: false }
     },
     input: {
       activePointers: 3,
@@ -292,7 +297,6 @@ function startGame(questions, sessionId, studentId) {
     spawn.call(this);
 
     // MOVIMENTO LATERALE SENZA DIAGONALE
-    // Quando tocco → movimento laterale
     this.input.on("pointerdown", p => {
       if (!falling || !falling.body) return;
 
@@ -304,17 +308,14 @@ function startGame(questions, sessionId, studentId) {
         falling.body.setVelocityX(lateralSpeed);
       }
 
-      // Mantiene la velocità verticale costante
       falling.body.setVelocityY(falling.fallSpeed);
     });
 
-    // Quando rilascio → torna dritto
     this.input.on("pointerup", () => {
       if (!falling || !falling.body) return;
       falling.body.setVelocityX(0);
     });
 
-    // Se il dito esce dallo schermo → torna dritto
     this.input.on("pointerout", () => {
       if (!falling || !falling.body) return;
       falling.body.setVelocityX(0);
@@ -356,12 +357,23 @@ function startGame(questions, sessionId, studentId) {
     falling.body.setVelocityY(fallSpeed);
     falling.body.setVelocityX(0);
 
+    // MARKER SOTTO L'OGGETTO
+    const marker = scene.add.circle(
+      falling.x,
+      falling.y + falling.height / 2 + 5,
+      4,
+      0x000000
+    );
+    marker.setDepth(10);
+    falling.marker = marker;
+
     baskets.forEach(b => {
       scene.physics.add.overlap(falling, b, () => {
         if (!falling.active) return;
 
         if (b.basketName === target) score++;
 
+        if (falling.marker) falling.marker.destroy();
         falling.destroy();
         index++;
         spawn.call(scene);
@@ -370,10 +382,25 @@ function startGame(questions, sessionId, studentId) {
   }
 
   function update() {
-    if (falling && falling.y > 620) {
-      falling.destroy();
-      index++;
-      spawn.call(this);
+    if (falling) {
+
+      // Aggiorna marker
+      if (falling.marker) {
+        falling.marker.x = Phaser.Math.Clamp(
+          falling.x,
+          5,
+          this.cameras.main.width - 5
+        );
+        falling.marker.y = falling.y + falling.height / 2 + 5;
+      }
+
+      // Oggetto uscito dallo schermo
+      if (falling.y > 620) {
+        if (falling.marker) falling.marker.destroy();
+        falling.destroy();
+        index++;
+        spawn.call(this);
+      }
     }
   }
 

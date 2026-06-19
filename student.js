@@ -268,6 +268,7 @@ function startGame(questions, sessionId, studentId) {
   let falling = null;
   let baskets = [];
   let target = null;
+  let blockedByClamp = false;
 
   function preload() {}
 
@@ -299,6 +300,9 @@ function startGame(questions, sessionId, studentId) {
     // MOVIMENTO LATERALE SENZA DIAGONALE
     this.input.on("pointerdown", p => {
       if (!falling || !falling.body) return;
+
+      // Sblocca se era bloccato dal clamp
+      blockedByClamp = false;
 
       const lateralSpeed = 200;
 
@@ -387,7 +391,6 @@ function startGame(questions, sessionId, studentId) {
       // Aggiorna marker
       if (falling.marker) {
 
-        // Clamp del puntino
         const clampedX = Phaser.Math.Clamp(
           falling.x,
           5,
@@ -397,9 +400,12 @@ function startGame(questions, sessionId, studentId) {
         falling.marker.x = clampedX;
         falling.marker.y = falling.y + falling.height / 2 + 5;
 
-        // Se il puntino è stato clamped → ferma anche il movimento dell'oggetto
+        // Se il puntino è clamped → ferma l'oggetto
         if (clampedX !== falling.x) {
           falling.body.setVelocityX(0);
+          blockedByClamp = true;
+        } else {
+          blockedByClamp = false;
         }
       }
 

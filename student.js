@@ -290,12 +290,13 @@ function startGame(questions, sessionId, studentId) {
     spawn.call(this);
 
     // MOVIMENTO LATERALE SENZA DIAGONALE
+    // Quando tocco → movimento laterale
     this.input.on("pointerdown", p => {
       if (!falling || !falling.body) return;
 
       const lateralSpeed = 200;
 
-      if (p.x < 200) {
+      if (p.x < this.cameras.main.width / 2) {
         falling.body.setVelocityX(-lateralSpeed);
       } else {
         falling.body.setVelocityX(lateralSpeed);
@@ -303,6 +304,18 @@ function startGame(questions, sessionId, studentId) {
 
       // Mantiene la velocità verticale costante
       falling.body.setVelocityY(falling.fallSpeed);
+    });
+
+    // Quando rilascio → torna dritto
+    this.input.on("pointerup", () => {
+      if (!falling || !falling.body) return;
+      falling.body.setVelocityX(0);
+    });
+
+    // Se il dito esce dallo schermo → torna dritto
+    this.input.on("pointerout", () => {
+      if (!falling || !falling.body) return;
+      falling.body.setVelocityX(0);
     });
   }
 

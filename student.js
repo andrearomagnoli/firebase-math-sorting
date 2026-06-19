@@ -253,6 +253,27 @@ function startGame(questions, sessionId, studentId) {
   let baskets = [];
   let target = null;
 
+  // -------------------------
+  // FUNZIONE DI RIDIMENSIONAMENTO CESTE
+  // -------------------------
+  function resizeBaskets(scene) {
+    const unique = [...new Set(questions.map(q => q.basket))];
+    const w = scene.cameras.main.width / unique.length;
+
+    baskets.forEach((b, i) => {
+      b.width = w - 10;
+      b.x = w * i + w / 2;
+      b.y = scene.cameras.main.height - 40;
+
+      b.body.updateFromGameObject();
+
+      if (b.label) {
+        b.label.x = b.x - 40;
+        b.label.y = scene.cameras.main.height - 60;
+      }
+    });
+  }
+
   function preload() {}
 
   function create() {
@@ -260,6 +281,7 @@ function startGame(questions, sessionId, studentId) {
     // Resize dinamico
     window.addEventListener("resize", () => {
       this.scale.resize(window.innerWidth, window.innerHeight);
+      resizeBaskets(this);
     });
 
     const unique = [...new Set(questions.map(q => q.basket))];
@@ -277,10 +299,14 @@ function startGame(questions, sessionId, studentId) {
       rect.basketName = b;
       baskets.push(rect);
 
-      this.add.text(rect.x - 40, this.cameras.main.height - 60, b, {
-        fontSize: "14px",
-        color: "#000"
-      });
+      const label = this.add.text(
+        rect.x - 40,
+        this.cameras.main.height - 60,
+        b,
+        { fontSize: "14px", color: "#000" }
+      );
+
+      rect.label = label;
     });
 
     spawn.call(this);

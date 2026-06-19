@@ -388,7 +388,6 @@ function startGame(questions, sessionId, studentId) {
   function update() {
     if (falling) {
 
-      // Aggiorna marker
       if (falling.marker) {
 
         const clampedX = Phaser.Math.Clamp(
@@ -397,15 +396,18 @@ function startGame(questions, sessionId, studentId) {
           this.cameras.main.width - 5
         );
 
+        // Aggiorna marker
         falling.marker.x = clampedX;
         falling.marker.y = falling.y + falling.height / 2 + 5;
 
-        // Se il puntino è clamped → ferma l'oggetto
+        // Se il puntino è clamped → teletrasporta anche l'oggetto
         if (clampedX !== falling.x) {
+
+          // TELETRASPORTO: evita l'incastro
+          falling.x = clampedX;
+
+          // Ferma la velocità laterale
           falling.body.setVelocityX(0);
-          blockedByClamp = true;
-        } else {
-          blockedByClamp = false;
         }
       }
 

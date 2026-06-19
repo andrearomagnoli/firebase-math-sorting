@@ -386,12 +386,21 @@ function startGame(questions, sessionId, studentId) {
 
       // Aggiorna marker
       if (falling.marker) {
-        falling.marker.x = Phaser.Math.Clamp(
+
+        // Clamp del puntino
+        const clampedX = Phaser.Math.Clamp(
           falling.x,
           5,
           this.cameras.main.width - 5
         );
+
+        falling.marker.x = clampedX;
         falling.marker.y = falling.y + falling.height / 2 + 5;
+
+        // Se il puntino è stato clamped → ferma anche il movimento dell'oggetto
+        if (clampedX !== falling.x) {
+          falling.body.setVelocityX(0);
+        }
       }
 
       // Oggetto uscito dallo schermo

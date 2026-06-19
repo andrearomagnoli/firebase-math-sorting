@@ -54,7 +54,6 @@ function joinSession() {
     return;
   }
 
-  // Blocco rientro SOLO se lo studente ha completato quella partita
   const playedSession = localStorage.getItem("mathSorting_sessionId");
   const hasPlayed = localStorage.getItem("mathSorting_hasPlayed");
 
@@ -71,7 +70,6 @@ function joinSession() {
 
     const data = snap.val();
 
-    // Blocco totale dopo avvio o fine
     if (data.status === "started" || data.status === "finished") {
       alert("Non è più possibile entrare: la partita è già iniziata o terminata.");
       return;
@@ -90,14 +88,12 @@ function enterSession(sessionId, name) {
   gameFinished = false;
   gameStarted = false;
 
-  // Registra lo studente SOLO se ha nome valido
   db.ref(`sessions/${sessionId}/players/${studentId}`).set({
     name,
     score: 0,
     leftEarly: false
   });
 
-  // onDisconnect → segna uscita, ma NON crea record senza nome
   db.ref(`sessions/${sessionId}/players/${studentId}`).onDisconnect().update({
     leftEarly: true
   });
@@ -105,7 +101,6 @@ function enterSession(sessionId, name) {
   document.getElementById("joinBtn").style.display = "none";
   document.getElementById("exitBtn").style.display = "block";
 
-  // Listener sullo stato della sessione
   db.ref(`sessions/${sessionId}/status`).on("value", snap => {
     const status = snap.val();
     document.getElementById("status").textContent = "Stato sessione: " + status;
@@ -219,7 +214,7 @@ function requestFullscreen() {
 
   if (elem.requestFullscreen) {
     elem.requestFullscreen();
-  } else if (elem.webkitRequestFullscreen) { // iOS Safari
+  } else if (elem.webkitRequestFullscreen) {
     elem.webkitRequestFullscreen();
   } else if (elem.msRequestFullscreen) {
     elem.msRequestFullscreen();
@@ -244,7 +239,7 @@ function startGame(questions, sessionId, studentId) {
     backgroundColor: "#ffffff",
     physics: {
       default: "arcade",
-      arcade: { gravity: { y: 200 }, debug: false }
+      arcade: { gravity: { y: 0 }, debug: false }   // ← GRAVITÀ DISATTIVATA
     },
     input: {
       activePointers: 3,
@@ -294,9 +289,20 @@ function startGame(questions, sessionId, studentId) {
 
     spawn.call(this);
 
+    // MOVIMENTO LATERALE SENZA DIAGONALE
     this.input.on("pointerdown", p => {
       if (!falling || !falling.body) return;
-      falling.body.setVelocityX(p.x < 200 ? -150 : 150);
+
+      const lateralSpeed = 200;
+
+      if (p.x < 200) {
+        falling.body.setVelocityX(-lateralSpeed);
+      } else {
+        falling.body.setVelocityX(lateralSpeed);
+      }
+
+      // Mantiene la velocità verticale costante
+      falling.body.setVelocityY(falling.fallSpeed);
     });
   }
 
@@ -321,9 +327,19 @@ function startGame(questions, sessionId, studentId) {
     falling.body.setSize(falling.width, falling.height);
     falling.body.setOffset(0, 0);
 
-    falling.body.setVelocityY(0);
     falling.body.setBounce(0);
     falling.body.setCollideWorldBounds(false);
+
+    // VELOCITÀ DI CADUTA COSTANTE (6 secondi)
+    const spawnY = 50;
+    const basketY = 580;
+    const fallDistance = basketY - spawnY;
+    const fallTime = 6000;
+    const fallSpeed = fallDistance / (fallTime / 1000);
+
+    falling.fallSpeed = fallSpeed;
+    falling.body.setVelocityY(fallSpeed);
+    falling.body.setVelocityX(0);
 
     baskets.forEach(b => {
       scene.physics.add.overlap(falling, b, () => {
@@ -356,7 +372,6 @@ function startGame(questions, sessionId, studentId) {
       leftEarly: false
     });
 
-    // Blocco rientro SOLO dopo aver completato la partita
     localStorage.setItem("mathSorting_sessionId", sessionId);
     localStorage.setItem("mathSorting_hasPlayed", "true");
 

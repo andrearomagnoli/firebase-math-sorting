@@ -112,7 +112,7 @@ function enterSession(sessionId, name) {
       document.getElementById("exitBtn").style.display = "none";
 
       // Nascondi titolo
-      const titleEl = document.getElementById("pageTitle");
+      const titleEl = document.getElementById("title");
       if (titleEl) titleEl.style.display = "none";
 
       loadQuestions(sessionId, questions => {
@@ -184,7 +184,7 @@ function resetUI() {
     gameInstance = null;
   }
 
-  const titleEl = document.getElementById("pageTitle");
+  const titleEl = document.getElementById("title");
   if (titleEl) titleEl.style.display = "block";
 
   document.getElementById("gameContainer").style.display = "none";
